@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-08-27
+
+### Added
+- **Barcode & QR Code Generation (`BarcodesController`)**:
+  - `GET /api/v1/barcodes/sku/{sku}`: Generates linear Code 128 / Code 39 vector SVG barcodes with human-readable text labels.
+  - `GET /api/v1/barcodes/sku/{sku}/image`: Streams direct SVG image files for barcode label printing.
+  - `GET /api/v1/barcodes/qr/{sku}`: Generates 2D QR matrix SVGs with finder patterns for mobile warehouse scanner reading.
+  - `GET /api/v1/barcodes/scan/{scannedCode}`: Resolves scanned barcode strings into instant product metadata, stock on-hand, and per-facility bin coordinates.
+- **Bulk CSV Import & Export (`BulkController`)**:
+  - `POST /api/v1/bulk/import/products`: High-throughput CSV catalog parser with row-level validation error tracking, automatic category assignment, and batch product upserts.
+  - `GET /api/v1/bulk/export/products`: Exports complete catalog snapshot as a downloadable CSV spreadsheet.
+  - `GET /api/v1/bulk/export/template`: Downloads blank starter CSV template with example records for supplier/catalog onboarding.
+- **Test Suite Expansion**: Added 11 new tests in `BarcodeServiceTests`, `BulkDataServiceTests`, `BarcodesControllerTests`, and `BulkControllerTests`, expanding test coverage to 45 unit and integration tests with a 100% pass rate.
+
 ## [1.2.0] - 2026-08-27
 
 ### Added

@@ -1,6 +1,6 @@
 # Inventory Tracker API (Build 73)
 
-A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0, Entity Framework Core, SQL Server / In-Memory persistence, multi-warehouse location partitioning, inter-warehouse stock transfers, automated replenishment purchase order (PO) generation, transaction auditing, and real-time business valuation analytics.
+A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0, Entity Framework Core, SQL Server / In-Memory persistence, multi-warehouse location partitioning, inter-warehouse stock transfers, automated replenishment purchase orders, vector SVG barcode/QR generation, mobile handheld scanner lookup, CSV bulk catalog import/export, transaction auditing, and real-time business valuation analytics.
 
 ## Stack
 
@@ -89,7 +89,24 @@ Once running, navigate to:
 | `POST` | `/api/v1/transfers/{id}/receive` | Confirm receipt, add destination inventory, and set status to `Received` |
 | `POST` | `/api/v1/transfers/{id}/cancel` | Cancel order before shipment and release reserved inventory |
 
-### 4. Suppliers & Procurement (`/api/v1/suppliers`)
+### 4. Barcodes & Handheld Scanner Resolution (`/api/v1/barcodes`)
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/barcodes/sku/{sku}` | Generates Code 128 linear vector SVG barcode with label metadata |
+| `GET` | `/api/v1/barcodes/sku/{sku}/image` | Streams direct SVG image file for label printing |
+| `GET` | `/api/v1/barcodes/qr/{sku}` | Generates 2D QR matrix SVG barcode for mobile scanners |
+| `GET` | `/api/v1/barcodes/scan/{scannedCode}` | Mobile scanner lookup resolving SKU into stock on-hand and facility bin coordinates |
+
+### 5. Bulk CSV Catalog Import & Export (`/api/v1/bulk`)
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/v1/bulk/import/products` | Bulk upload CSV spreadsheet with row-level validation and batch upsert |
+| `GET` | `/api/v1/bulk/export/products` | Download entire product catalog as CSV spreadsheet |
+| `GET` | `/api/v1/bulk/export/template` | Download blank starter CSV template for supplier/catalog onboarding |
+
+### 6. Suppliers & Procurement (`/api/v1/suppliers`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -99,7 +116,7 @@ Once running, navigate to:
 | `POST` | `/api/v1/suppliers` | Register new supplier vendor |
 | `PUT` | `/api/v1/suppliers/{id}` | Update supplier profile and lead times |
 
-### 5. Automated Replenishment & Purchase Orders (`/api/v1/purchase-orders`)
+### 7. Automated Replenishment & Purchase Orders (`/api/v1/purchase-orders`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -112,7 +129,7 @@ Once running, navigate to:
 | `POST` | `/api/v1/purchase-orders/{id}/receive` | Receive shipment intake, increment warehouse stock, and recalculate unit costs |
 | `POST` | `/api/v1/purchase-orders/{id}/cancel` | Cancel an open purchase order |
 
-### 6. Stock Movements & Transactions (`/api/v1/inventory`)
+### 8. Stock Movements & Transactions (`/api/v1/inventory`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -122,7 +139,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/inventory/transactions` | Paginated transaction audit log with date range and product filtering |
 | `GET` | `/api/v1/inventory/transactions/product/{productId}` | Retrieve transaction history for a specific product |
 
-### 7. Business Intelligence & Analytics (`/api/v1/inventory/summary`)
+### 9. Business Intelligence & Analytics (`/api/v1/inventory/summary`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -131,30 +148,26 @@ Once running, navigate to:
 
 ## Sample `curl` Requests
 
-### Get Low-Stock Auto-Reorder Suggestions
+### Generate a Code 128 Vector Barcode
 ```bash
-curl -X GET "http://localhost:5000/api/v1/purchase-orders/suggestions"
+curl -X GET "http://localhost:5000/api/v1/barcodes/sku/ELEC-MON-4K27"
 ```
 
-### Auto-Generate Draft POs for Low Stock Items
+### Scan a Barcode on Mobile Terminal
 ```bash
-curl -X POST "http://localhost:5000/api/v1/purchase-orders/auto-generate?defaultDestinationWarehouseId=1"
+curl -X GET "http://localhost:5000/api/v1/barcodes/scan/ELEC-MON-4K27"
 ```
 
-### Receive Goods on Purchase Order
+### Bulk Import Products via CSV
 ```bash
-curl -X POST "http://localhost:5000/api/v1/purchase-orders/1/receive" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "receivedItems": [
-      {
-        "purchaseOrderItemId": 1,
-        "quantityReceived": 75,
-        "actualUnitCost": 28.00
-      }
-    ],
-    "notes": "Verified complete delivery on dock A"
-  }'
+curl -X POST "http://localhost:5000/api/v1/bulk/import/products" \
+  -H "Content-Type: text/csv" \
+  --data-binary $'Sku,Name,Category,UnitPrice,UnitCost,QuantityInStock,ReorderThreshold,ReorderQuantity\nELEC-DOCK-60W,USB-C 60W Dock,Electronics,79.99,35.00,50,15,30'
+```
+
+### Download Product Catalog CSV Export
+```bash
+curl -X GET "http://localhost:5000/api/v1/bulk/export/products" -o catalog-export.csv
 ```
 
 ## Running Tests
@@ -169,4 +182,4 @@ dotnet test
 
 The Inventory Tracker API is structured following domain-driven separation of concerns and clean architecture principles. Domain models (`Product`, `Category`, `Warehouse`, `WarehouseStock`, `StockTransfer`, `Supplier`, `PurchaseOrder`, `PurchaseOrderItem`, `InventoryTransaction`) represent physical logistics structures with strict integrity constraints.
 
-The automated replenishment engine continuously scans stock levels across facilities, compares them against configured `ReorderThreshold` values, and computes economic order quantities. It automatically generates supplier-grouped draft Purchase Orders with delivery date projections based on vendor lead times. Intake receiving performs weighted average unit cost recalculation and synchronizes both facility-level and global catalog balances atomically.
+Vector barcode generation leverages direct SVG path/rect mathematical rendering for linear Code 128 and 2D QR matrix codes, avoiding third-party rendering bloat. Bulk CSV ingestion processes streams with culture-invariant formatting, field escaping, and comprehensive row-level error reporting, guaranteeing atomic multi-field upserts.

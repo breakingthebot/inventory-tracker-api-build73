@@ -47,6 +47,8 @@ builder.Services.AddScoped<IWarehouseService, WarehouseService>();
 builder.Services.AddScoped<ITransferService, TransferService>();
 builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
+builder.Services.AddScoped<IBarcodeService, BarcodeService>();
+builder.Services.AddScoped<IBulkDataService, BulkDataService>();
 
 // Configure OpenAPI / Swagger Documentation
 builder.Services.AddEndpointsApiExplorer();
