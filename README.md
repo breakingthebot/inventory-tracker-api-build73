@@ -1,6 +1,6 @@
 # Inventory Tracker API (Build 73)
 
-A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0, Entity Framework Core, SQL Server / In-Memory persistence, transaction auditing, weighted average unit cost tracking, and real-time business valuation analytics.
+A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0, Entity Framework Core, SQL Server / In-Memory persistence, multi-warehouse location partitioning, inter-warehouse stock transfers, transaction auditing, and real-time business valuation analytics.
 
 ## Stack
 
@@ -66,7 +66,30 @@ Once running, navigate to:
 | `PUT` | `/api/v1/products/{id}` | Update product details, prices, and replenishment rules |
 | `DELETE` | `/api/v1/products/{id}` | Delete product (fails if on-hand stock is positive) |
 
-### 2. Stock Operations & Auditing (`/api/v1/inventory`)
+### 2. Warehouses & Facility Stock (`/api/v1/warehouses`)
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/warehouses` | List all physical facilities with storage capacity & utilization metrics |
+| `GET` | `/api/v1/warehouses/{id}` | Retrieve facility details by database ID |
+| `GET` | `/api/v1/warehouses/code/{code}` | Retrieve facility by code (e.g. `WH-EAST`) |
+| `POST` | `/api/v1/warehouses` | Register a new warehouse facility |
+| `PUT` | `/api/v1/warehouses/{id}` | Update facility metadata and storage capacity limits |
+| `GET` | `/api/v1/warehouses/{id}/stock` | List product on-hand, reserved, and available stock lines per facility |
+| `PUT` | `/api/v1/warehouses/{id}/stock/{productId}/bin` | Assign or update physical aisle/rack/shelf bin coordinates |
+
+### 3. Inter-Warehouse Stock Transfers (`/api/v1/transfers`)
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/transfers` | Paginated list of transfers with status and facility filters |
+| `GET` | `/api/v1/transfers/{id}` | Retrieve transfer order details, line items, and tracking numbers |
+| `POST` | `/api/v1/transfers` | Initiate stock transfer and reserve inventory at source facility (`Pending`) |
+| `POST` | `/api/v1/transfers/{id}/ship` | Ship transfer, deduct source inventory, and set status to `InTransit` |
+| `POST` | `/api/v1/transfers/{id}/receive` | Confirm receipt, add destination inventory, and set status to `Received` |
+| `POST` | `/api/v1/transfers/{id}/cancel` | Cancel order before shipment and release reserved inventory |
+
+### 4. Stock Movements & Transactions (`/api/v1/inventory`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -76,7 +99,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/inventory/transactions` | Paginated transaction audit log with date range and product filtering |
 | `GET` | `/api/v1/inventory/transactions/product/{productId}` | Retrieve transaction history for a specific product |
 
-### 3. Business Intelligence & Analytics (`/api/v1/inventory/summary`)
+### 5. Business Intelligence & Analytics (`/api/v1/inventory/summary`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -85,52 +108,57 @@ Once running, navigate to:
 
 ## Sample `curl` Requests
 
-### Create a Product
+### Register a Warehouse Facility
 ```bash
-curl -X POST "http://localhost:5000/api/v1/products" \
+curl -X POST "http://localhost:5000/api/v1/warehouses" \
   -H "Content-Type: application/json" \
   -d '{
-    "sku": "ELEC-WEBCAM-4K",
-    "name": "Ultra HD 4K Streaming Webcam",
-    "description": "Auto-focus webcam with dual noise-canceling microphones",
-    "categoryId": 1,
-    "unitPrice": 129.99,
-    "unitCost": 64.50,
-    "initialQuantity": 30,
-    "reorderThreshold": 10,
-    "reorderQuantity": 40,
-    "unitOfMeasure": "pcs"
+    "code": "WH-SOUTH",
+    "name": "Miami International Logistics Gateway",
+    "address": "7700 NW 37th Ave",
+    "city": "Miami",
+    "state": "FL",
+    "postalCode": "33147",
+    "country": "USA",
+    "capacityUnits": 18000
   }'
 ```
 
-### Inbound Restock
+### Initiate an Inter-Warehouse Transfer
 ```bash
-curl -X POST "http://localhost:5000/api/v1/inventory/restock" \
+curl -X POST "http://localhost:5000/api/v1/transfers" \
   -H "Content-Type: application/json" \
   -d '{
-    "productId": 1,
-    "quantity": 25,
-    "unitCost": 205.00,
-    "purchaseOrderNumber": "PO-2026-8812",
-    "notes": "Q3 Restock shipment received from supplier"
+    "sourceWarehouseId": 1,
+    "destinationWarehouseId": 3,
+    "requestedBy": "logistics_mgr",
+    "notes": "Emergency stock rebalance to Dallas depot",
+    "items": [
+      {
+        "productId": 1,
+        "quantity": 10
+      }
+    ]
   }'
 ```
 
-### Outbound Dispatch
+### Ship Transfer Order
 ```bash
-curl -X POST "http://localhost:5000/api/v1/inventory/dispatch" \
+curl -X POST "http://localhost:5000/api/v1/transfers/1/ship" \
   -H "Content-Type: application/json" \
   -d '{
-    "productId": 1,
-    "quantity": 5,
-    "salesOrderNumber": "SO-99214",
-    "notes": "Direct customer order fulfillment"
+    "trackingNumber": "FDX-998241029",
+    "notes": "Loaded on Linehaul Trailer 40B"
   }'
 ```
 
-### Get Financial Valuation & Category Summary
+### Receive Transfer at Destination Warehouse
 ```bash
-curl -X GET "http://localhost:5000/api/v1/inventory/summary"
+curl -X POST "http://localhost:5000/api/v1/transfers/1/receive" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "notes": "Inspected and slotted into Bin C-05-10"
+  }'
 ```
 
 ## Running Tests
@@ -141,16 +169,10 @@ To run the full automated test suite:
 dotnet test
 ```
 
-## Data Handling & Privacy
-
-- **Persistence**: All catalog records, stock quantities, and audit logs are retained solely for warehouse operations.
-- **Redaction**: No personal customer data or financial payment card details are stored or logged in this service.
-- **Audit Immutability**: Stock transactions are recorded as append-only audit entries to maintain accounting traceability.
-
 ## Architecture Notes
 
-The Inventory Tracker API is structured following domain-driven separation of concerns and clean architecture principles. Domain models (`Product`, `Category`, `InventoryTransaction`) model real-world warehouse entities with strict data integrity rules (unique SKU constraints, decimal precision for currency amounts, and relational foreign keys). 
+The Inventory Tracker API is structured following domain-driven separation of concerns and clean architecture principles. Domain models (`Product`, `Category`, `Warehouse`, `WarehouseStock`, `StockTransfer`, `InventoryTransaction`) represent physical logistics structures with strict integrity constraints.
 
-Mutations are isolated within specialized domain services (`ProductService`, `InventoryService`, `AnalyticsService`), ensuring that critical business rules—such as preventing stock from dropping below zero, tracking historical transactions upon balance alterations, and recalculating weighted average costs on restock—are centralized and testable independently of HTTP transport layers.
+Inter-warehouse stock transfers follow a resilient multi-stage state machine (`Draft` -> `Pending` -> `InTransit` -> `Received` / `Cancelled`). Inventory is first reserved upon creation, deducted and audited as `StockOut` upon shipment, and incremented and audited as `StockIn` upon destination receiving. This prevents inventory double-counting while goods are physically on the road.
 
 Requests flow through `GlobalExceptionMiddleware` for unified error normalization, `RequestLoggingMiddleware` for performance monitoring, and standard ASP.NET Core dependency injection. The database provider is decoupled, enabling in-memory execution for rapid local prototyping and test execution alongside production SQL Server compatibility.

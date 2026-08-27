@@ -1,5 +1,5 @@
 // src/InventoryTracker.Api/Data/DbInitializer.cs
-// Seeds initial category and product inventory records into the database.
+// Seeds initial category, product, warehouse facility, and inventory stock distributions into the database.
 // Connects to: src/InventoryTracker.Api/Data/InventoryDbContext.cs, src/InventoryTracker.Api/Program.cs
 // Created: 2026-08-26
 
@@ -9,16 +9,15 @@ using Microsoft.EntityFrameworkCore;
 namespace InventoryTracker.Api.Data;
 
 /// <summary>
-/// Database seeder populating initial catalog items and opening balances.
+/// Database seeder populating initial catalog items, warehouse facilities, and opening balances.
 /// </summary>
 public static class DbInitializer
 {
     /// <summary>
-    /// Ensures database creation and seeds default categories and catalog items.
+    /// Ensures database creation and seeds default categories, facilities, and catalog items.
     /// </summary>
     public static async Task SeedAsync(InventoryDbContext context)
     {
-        // For relational databases or in-memory, ensure created
         await context.Database.EnsureCreatedAsync();
 
         if (await context.Categories.AnyAsync())
@@ -26,6 +25,7 @@ public static class DbInitializer
             return; // Data already seeded
         }
 
+        // 1. Seed Categories
         var categories = new List<Category>
         {
             new() { Name = "Electronics", Description = "Computing, displays, audio, and accessories" },
@@ -44,6 +44,55 @@ public static class DbInitializer
         var packing = categories[3].Id;
         var apparel = categories[4].Id;
 
+        // 2. Seed Warehouses
+        var warehouses = new List<Warehouse>
+        {
+            new()
+            {
+                Code = "WH-EAST",
+                Name = "Atlanta Regional Fulfillment Hub",
+                Address = "4800 Logistics Parkway",
+                City = "Atlanta",
+                State = "GA",
+                PostalCode = "30336",
+                Country = "USA",
+                CapacityUnits = 25000,
+                IsActive = true
+            },
+            new()
+            {
+                Code = "WH-WEST",
+                Name = "Reno Distribution Center",
+                Address = "1200 Tahoe Logistics Way",
+                City = "Reno",
+                State = "NV",
+                PostalCode = "89502",
+                Country = "USA",
+                CapacityUnits = 30000,
+                IsActive = true
+            },
+            new()
+            {
+                Code = "WH-CENTRAL",
+                Name = "Dallas Logistics Depot",
+                Address = "8900 DFW Trade Center Blvd",
+                City = "Dallas",
+                State = "TX",
+                PostalCode = "75261",
+                Country = "USA",
+                CapacityUnits = 20000,
+                IsActive = true
+            }
+        };
+
+        await context.Warehouses.AddRangeAsync(warehouses);
+        await context.SaveChangesAsync();
+
+        var whEast = warehouses[0].Id;
+        var whWest = warehouses[1].Id;
+        var whCentral = warehouses[2].Id;
+
+        // 3. Seed Products
         var products = new List<Product>
         {
             new()
@@ -82,7 +131,7 @@ public static class DbInitializer
                 CategoryId = elec,
                 UnitPrice = 59.95m,
                 UnitCost = 28.00m,
-                QuantityInStock = 8, // Low stock on purpose
+                QuantityInStock = 8,
                 ReorderThreshold = 20,
                 ReorderQuantity = 75,
                 UnitOfMeasure = "pcs",
@@ -110,7 +159,7 @@ public static class DbInitializer
                 CategoryId = office,
                 UnitPrice = 14.99m,
                 UnitCost = 6.25m,
-                QuantityInStock = 0, // Out of stock on purpose
+                QuantityInStock = 0,
                 ReorderThreshold = 30,
                 ReorderQuantity = 150,
                 UnitOfMeasure = "pack",
@@ -152,7 +201,7 @@ public static class DbInitializer
                 CategoryId = apparel,
                 UnitPrice = 22.00m,
                 UnitCost = 9.80m,
-                QuantityInStock = 5, // Low stock on purpose
+                QuantityInStock = 5,
                 ReorderThreshold = 15,
                 ReorderQuantity = 80,
                 UnitOfMeasure = "box",
@@ -163,7 +212,42 @@ public static class DbInitializer
         await context.Products.AddRangeAsync(products);
         await context.SaveChangesAsync();
 
-        // Seed opening balance transactions for products
+        // 4. Seed Warehouse Stock Distribution with Bin Locations
+        var warehouseStocks = new List<WarehouseStock>
+        {
+            // ELEC-MON-4K27 (Total 45: East=25, West=15, Central=5)
+            new() { WarehouseId = whEast, ProductId = products[0].Id, QuantityOnHand = 25, BinLocation = "A-01-01" },
+            new() { WarehouseId = whWest, ProductId = products[0].Id, QuantityOnHand = 15, BinLocation = "W-12-04" },
+            new() { WarehouseId = whCentral, ProductId = products[0].Id, QuantityOnHand = 5, BinLocation = "C-05-10" },
+
+            // ELEC-KEY-MEC01 (Total 120: East=60, West=60)
+            new() { WarehouseId = whEast, ProductId = products[1].Id, QuantityOnHand = 60, BinLocation = "A-02-14" },
+            new() { WarehouseId = whWest, ProductId = products[1].Id, QuantityOnHand = 60, BinLocation = "W-10-02" },
+
+            // ELEC-HUB-10P (Total 8: East=8)
+            new() { WarehouseId = whEast, ProductId = products[2].Id, QuantityOnHand = 8, BinLocation = "A-03-08" },
+
+            // OFF-PAP-A4500 (Total 450: East=200, West=150, Central=100)
+            new() { WarehouseId = whEast, ProductId = products[3].Id, QuantityOnHand = 200, BinLocation = "B-01-01" },
+            new() { WarehouseId = whWest, ProductId = products[3].Id, QuantityOnHand = 150, BinLocation = "W-01-01" },
+            new() { WarehouseId = whCentral, ProductId = products[3].Id, QuantityOnHand = 100, BinLocation = "C-01-01" },
+
+            // TOOL-DRILL-20V (Total 28: West=20, Central=8)
+            new() { WarehouseId = whWest, ProductId = products[5].Id, QuantityOnHand = 20, BinLocation = "W-08-05" },
+            new() { WarehouseId = whCentral, ProductId = products[5].Id, QuantityOnHand = 8, BinLocation = "C-04-12" },
+
+            // PKG-BOX-12X12 (Total 70: East=40, Central=30)
+            new() { WarehouseId = whEast, ProductId = products[6].Id, QuantityOnHand = 40, BinLocation = "B-10-01" },
+            new() { WarehouseId = whCentral, ProductId = products[6].Id, QuantityOnHand = 30, BinLocation = "C-09-02" },
+
+            // APP-GLV-NIT100 (Total 5: Central=5)
+            new() { WarehouseId = whCentral, ProductId = products[7].Id, QuantityOnHand = 5, BinLocation = "C-02-04" }
+        };
+
+        await context.WarehouseStocks.AddRangeAsync(warehouseStocks);
+        await context.SaveChangesAsync();
+
+        // 5. Seed Initial Stock Transactions
         var transactions = new List<InventoryTransaction>();
         foreach (var p in products.Where(x => x.QuantityInStock > 0))
         {
@@ -182,6 +266,34 @@ public static class DbInitializer
         }
 
         await context.InventoryTransactions.AddRangeAsync(transactions);
+        await context.SaveChangesAsync();
+
+        // 6. Seed Sample Inter-Warehouse Transfer Order
+        var sampleTransfer = new StockTransfer
+        {
+            TransferNumber = "TRF-2026-0001",
+            SourceWarehouseId = whEast,
+            DestinationWarehouseId = whCentral,
+            Status = StockTransferStatus.InTransit,
+            RequestedBy = "logistics_admin",
+            TrackingNumber = "FDX-994821034",
+            Notes = "Rebalancing USB hubs and monitors to Dallas depot",
+            CreatedAtUtc = DateTime.UtcNow.AddDays(-2),
+            ShippedAtUtc = DateTime.UtcNow.AddDays(-1),
+            Items = new List<StockTransferItem>
+            {
+                new()
+                {
+                    ProductId = products[0].Id,
+                    QuantityRequested = 5,
+                    QuantityShipped = 5,
+                    QuantityReceived = 0,
+                    UnitCost = products[0].UnitCost
+                }
+            }
+        };
+
+        await context.StockTransfers.AddAsync(sampleTransfer);
         await context.SaveChangesAsync();
     }
 }

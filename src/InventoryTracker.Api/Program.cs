@@ -43,6 +43,8 @@ builder.Services.AddDbContext<InventoryDbContext>(options =>
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+builder.Services.AddScoped<IWarehouseService, WarehouseService>();
+builder.Services.AddScoped<ITransferService, TransferService>();
 
 // Configure OpenAPI / Swagger Documentation
 builder.Services.AddEndpointsApiExplorer();

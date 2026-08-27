@@ -1,6 +1,6 @@
 // src/InventoryTracker.Api/Models/Product.cs
 // Represents a trackable inventory item entity with stock balance and reorder rules.
-// Connects to: src/InventoryTracker.Api/Models/Category.cs, src/InventoryTracker.Api/Models/InventoryTransaction.cs
+// Connects to: src/InventoryTracker.Api/Models/Category.cs, src/InventoryTracker.Api/Models/WarehouseStock.cs
 // Created: 2026-08-26
 
 namespace InventoryTracker.Api.Models;
@@ -51,7 +51,7 @@ public class Product
     public decimal UnitCost { get; set; }
 
     /// <summary>
-    /// Current on-hand quantity available in the warehouse.
+    /// Current on-hand quantity available across all warehouses.
     /// </summary>
     public int QuantityInStock { get; set; }
 
@@ -89,4 +89,14 @@ public class Product
     /// Navigation collection of historical stock movements for this product.
     /// </summary>
     public ICollection<InventoryTransaction> Transactions { get; set; } = new List<InventoryTransaction>();
+
+    /// <summary>
+    /// Navigation collection of stock distributions across physical warehouses.
+    /// </summary>
+    public ICollection<WarehouseStock> WarehouseStocks { get; set; } = new List<WarehouseStock>();
+
+    /// <summary>
+    /// Navigation collection of transfer order items involving this product.
+    /// </summary>
+    public ICollection<StockTransferItem> TransferItems { get; set; } = new List<StockTransferItem>();
 }

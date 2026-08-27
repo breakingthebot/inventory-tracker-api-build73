@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-08-27
+
+### Added
+- **Multi-Warehouse Domain Models**: Added `Warehouse`, `WarehouseStock` (per-facility on-hand balance, reservations, and bin locations), `StockTransfer`, and `StockTransferItem` entities with relational navigation in `InventoryDbContext`.
+- **Facility Management Endpoints (`WarehousesController`)**:
+  - `GET /api/v1/warehouses`: List all warehouse facilities with capacity and utilization rollups.
+  - `GET /api/v1/warehouses/{id}`: Detailed facility retrieval by primary ID.
+  - `GET /api/v1/warehouses/code/{code}`: Facility retrieval by unique code (e.g. `WH-EAST`).
+  - `POST /api/v1/warehouses`: Register new warehouse facility.
+  - `PUT /api/v1/warehouses/{id}`: Update warehouse metadata and storage volume capacity.
+  - `GET /api/v1/warehouses/{id}/stock`: List on-hand and available stock lines per warehouse.
+  - `PUT /api/v1/warehouses/{id}/stock/{productId}/bin`: Update aisle/rack/shelf bin coordinates.
+- **Inter-Warehouse Transfer Workflows (`TransfersController`)**:
+  - `GET /api/v1/transfers`: Query transfer orders with status/facility filters and pagination.
+  - `GET /api/v1/transfers/{id}`: Get transfer order with line items and tracking metadata.
+  - `POST /api/v1/transfers`: Create transfer order and reserve source stock (`Pending`).
+  - `POST /api/v1/transfers/{id}/ship`: Mark transfer `InTransit`, deduct source inventory, and record outbound transaction.
+  - `POST /api/v1/transfers/{id}/receive`: Mark transfer `Received`, add destination inventory, and record inbound transaction.
+  - `POST /api/v1/transfers/{id}/cancel`: Cancel transfer before shipment and release reserved inventory.
+- **Seeder Expansion**: Seeded 3 regional fulfillment facilities (`WH-EAST` Atlanta, `WH-WEST` Reno, `WH-CENTRAL` Dallas) with realistic distributed inventory balances and bin coordinates.
+- **Extended Test Suite**: Added 11 new tests in `WarehouseServiceTests`, `TransferServiceTests`, and `TransfersControllerTests`, expanding coverage to 27 tests with 100% pass rate.
+
 ## [1.0.0] - 2026-08-26
 
 ### Added

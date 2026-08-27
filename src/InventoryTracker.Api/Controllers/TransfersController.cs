@@ -1,0 +1,102 @@
+// src/InventoryTracker.Api/Controllers/TransfersController.cs
+// REST controller for initiating, shipping, receiving, and tracking inter-warehouse stock transfers.
+// Connects to: src/InventoryTracker.Api/Services/ITransferService.cs, src/InventoryTracker.Api/DTOs/TransferDtos.cs
+// Created: 2026-08-27
+
+using InventoryTracker.Api.DTOs;
+using InventoryTracker.Api.Services;
+using Microsoft.AspNetCore.Mvc;
+
+namespace InventoryTracker.Api.Controllers;
+
+/// <summary>
+/// Manages inter-warehouse stock transfer orders, carrier dispatching, and destination receiving.
+/// </summary>
+[ApiController]
+[Route("api/v1/[controller]")]
+public class TransfersController : ControllerBase
+{
+    private readonly ITransferService _transferService;
+
+    public TransfersController(ITransferService transferService)
+    {
+        _transferService = transferService;
+    }
+
+    /// <summary>
+    /// Retrieves a paginated list of stock transfers with status and warehouse filters.
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<StockTransferDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTransfers([FromQuery] TransferFilterDto filter, CancellationToken cancellationToken)
+    {
+        var result = await _transferService.GetTransfersAsync(filter, cancellationToken);
+        return Ok(ApiResponse<PagedResult<StockTransferDto>>.Ok(result, $"Retrieved {result.Items.Count} stock transfers."));
+    }
+
+    /// <summary>
+    /// Retrieves a single stock transfer order by its integer database ID.
+    /// </summary>
+    [HttpGet("{id:int}")]
+    [ProducesResponseType(typeof(ApiResponse<StockTransferDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetTransferById(int id, CancellationToken cancellationToken)
+    {
+        var transfer = await _transferService.GetTransferByIdAsync(id, cancellationToken);
+        if (transfer == null)
+        {
+            return NotFound(ApiResponse<object>.Fail($"Stock transfer with ID {id} was not found."));
+        }
+
+        return Ok(ApiResponse<StockTransferDto>.Ok(transfer));
+    }
+
+    /// <summary>
+    /// Initiates a new inter-warehouse stock transfer order and reserves source stock.
+    /// </summary>
+    [HttpPost]
+    [ProducesResponseType(typeof(ApiResponse<StockTransferDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CreateTransfer([FromBody] CreateStockTransferDto dto, CancellationToken cancellationToken)
+    {
+        var transfer = await _transferService.CreateTransferAsync(dto, cancellationToken);
+        return CreatedAtAction(nameof(GetTransferById), new { id = transfer.Id },
+            ApiResponse<StockTransferDto>.Ok(transfer, "Stock transfer initiated and source inventory reserved."));
+    }
+
+    /// <summary>
+    /// Marks a stock transfer as shipped, deducting inventory from the source warehouse and setting status to InTransit.
+    /// </summary>
+    [HttpPost("{id:int}/ship")]
+    [ProducesResponseType(typeof(ApiResponse<StockTransferDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ShipTransfer(int id, [FromBody] ShipTransferDto dto, CancellationToken cancellationToken)
+    {
+        var transfer = await _transferService.ShipTransferAsync(id, dto, cancellationToken);
+        return Ok(ApiResponse<StockTransferDto>.Ok(transfer, "Stock transfer shipped and marked In-Transit."));
+    }
+
+    /// <summary>
+    /// Confirms receipt of transferred items at the destination warehouse, adding inventory to destination stock.
+    /// </summary>
+    [HttpPost("{id:int}/receive")]
+    [ProducesResponseType(typeof(ApiResponse<StockTransferDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ReceiveTransfer(int id, [FromBody] ReceiveTransferDto dto, CancellationToken cancellationToken)
+    {
+        var transfer = await _transferService.ReceiveTransferAsync(id, dto, cancellationToken);
+        return Ok(ApiResponse<StockTransferDto>.Ok(transfer, "Stock transfer received into destination warehouse."));
+    }
+
+    /// <summary>
+    /// Cancels a pending transfer order before shipment and releases reserved source inventory.
+    /// </summary>
+    [HttpPost("{id:int}/cancel")]
+    [ProducesResponseType(typeof(ApiResponse<StockTransferDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CancelTransfer(int id, [FromQuery] string reason = "Cancelled by user", CancellationToken cancellationToken = default)
+    {
+        var transfer = await _transferService.CancelTransferAsync(id, reason, cancellationToken);
+        return Ok(ApiResponse<StockTransferDto>.Ok(transfer, "Stock transfer cancelled and reserved stock released."));
+    }
+}
