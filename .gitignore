@@ -1,0 +1,35 @@
+## Build & Configuration
+AGENTS.md
+BUILD_NOTES.md
+.env
+.env.local
+.env.*.local
+*.log
+
+## .NET / C# Build Outputs
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+.vscode/
+*.suo
+*.userprefs
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+## Package Caches & Dependencies
+packages/
+*.nuget.props
+*.nuget.targets
+node_modules/
+venv/
+__pycache__/
+*.pyc
+dist/
+build/
+.DS_Store
+Thumbs.db
