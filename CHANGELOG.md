@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-08-27
+
+### Added
+- **Product Lots & Expiration Tracking (`LotsController`)**:
+  - `ProductLot` entity with manufacturing date, expiration date, on-hand/reserved quantities per facility, and `LotStatus` (`Active`, `Quarantine`, `Expired`, `Depleted`).
+  - `GET /api/v1/lots`: Paginated product lot listing with filters for product, facility, status, and expired items.
+  - `GET /api/v1/lots/{id}`: Detailed lot retrieval with product and warehouse metadata.
+  - `POST /api/v1/lots`: Register new batch lot and increment warehouse stock.
+  - `PUT /api/v1/lots/{id}`: Update lot operational status (quarantine hold/release) or expiration date.
+  - `GET /api/v1/lots/expiring`: Real-time expiration risk report aggregating units and financial valuation at risk within configurable day thresholds.
+  - `GET /api/v1/lots/fefo-plan`: First-Expired, First-Out (FEFO) recommendation algorithm allocating units from oldest / soonest-expiring active lots.
+  - `POST /api/v1/lots/dispatch-fefo`: Automated batch dispatch deducting quantities across lots following FEFO rules, updating balances, and recording audit transactions.
+- **Product Model Updates**: Added `IsLotTracked` flag and `ProductLots` navigation collections.
+- **Seeded Lot Batches**: Initialized realistic batch lots for sensitive items (`APP-GLV-NIT100`, `OFF-PAP-A4500`).
+- **Test Suite Expansion**: Added 4 new unit and controller tests in `LotTrackingServiceTests` and `LotsControllerTests`, expanding test coverage to 60 unit and integration tests with a 100% pass rate.
+
 ## [1.5.0] - 2026-08-27
 
 ### Added

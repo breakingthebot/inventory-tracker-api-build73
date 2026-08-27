@@ -1,6 +1,6 @@
 # Inventory Tracker API (Build 73)
 
-A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0, Entity Framework Core, SQL Server / In-Memory persistence, multi-warehouse location partitioning, inter-warehouse stock transfers, automated replenishment purchase orders, vector SVG barcode/QR generation, mobile handheld scanner lookup, CSV bulk catalog import/export, outbound webhooks with HMAC-SHA256 signatures, Role-Based Access Control (RBAC), JWT authentication, transaction auditing, and real-time business valuation analytics.
+A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0, Entity Framework Core, SQL Server / In-Memory persistence, multi-warehouse location partitioning, inter-warehouse stock transfers, automated replenishment purchase orders, vector SVG barcode/QR generation, mobile handheld scanner lookup, CSV bulk catalog import/export, outbound webhooks with HMAC-SHA256 signatures, batch lot & expiration tracking with FEFO dispatching, Role-Based Access Control (RBAC), JWT authentication, transaction auditing, and real-time business valuation analytics.
 
 ## Stack
 
@@ -8,6 +8,7 @@ A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0
 - **Framework**: ASP.NET Core Web API
 - **Security / Authentication**: JWT Bearer Tokens, HMAC-SHA256 PBKDF2 Password Hashing, RBAC
 - **Integration**: Outbound Webhooks with HMAC-SHA256 signature headers (`X-Inventory-Signature-256`)
+- **Inventory Allocation**: First-Expired, First-Out (FEFO) & First-In, First-Out (FIFO) Lot Tracking
 - **ORM / Persistence**: Entity Framework Core 8.0 (SQL Server & In-Memory providers)
 - **API Documentation**: OpenAPI 3.0 / Swagger UI (`Swashbuckle.AspNetCore`) with Bearer Security Scheme
 - **Testing**: xUnit, Moq, Microsoft.EntityFrameworkCore.InMemory
@@ -101,7 +102,19 @@ Once running, navigate to:
 | `GET` | `/api/v1/warehouses/{id}/stock` | List product on-hand, reserved, and available stock lines per facility |
 | `PUT` | `/api/v1/warehouses/{id}/stock/{productId}/bin` | Assign or update physical aisle/rack/shelf bin coordinates |
 
-### 4. Inter-Warehouse Stock Transfers (`/api/v1/transfers`)
+### 4. Product Lots & Expiration Tracking (`/api/v1/lots`)
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/lots` | Paginated list of lots filtered by product, warehouse, status, or expiration |
+| `GET` | `/api/v1/lots/{id}` | Retrieve specific batch lot details with warehouse metadata |
+| `POST` | `/api/v1/lots` | Register a new lot batch and increment warehouse stock |
+| `PUT` | `/api/v1/lots/{id}` | Update lot operational status (Quarantine/Active) or expiration date |
+| `GET` | `/api/v1/lots/expiring` | Expiration risk report calculating units and valuation at risk within day window |
+| `GET` | `/api/v1/lots/fefo-plan` | Compute FEFO picking recommendation allocating from earliest-expiring active lots |
+| `POST` | `/api/v1/lots/dispatch-fefo` | Execute automated FEFO batch deduction, update lot balances, and log audits |
+
+### 5. Inter-Warehouse Stock Transfers (`/api/v1/transfers`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -112,7 +125,7 @@ Once running, navigate to:
 | `POST` | `/api/v1/transfers/{id}/receive` | Confirm receipt, add destination inventory, and set status to `Received` |
 | `POST` | `/api/v1/transfers/{id}/cancel` | Cancel order before shipment and release reserved inventory |
 
-### 5. Barcodes & Handheld Scanner Resolution (`/api/v1/barcodes`)
+### 6. Barcodes & Handheld Scanner Resolution (`/api/v1/barcodes`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -121,7 +134,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/barcodes/qr/{sku}` | Generates 2D QR matrix SVG barcode for mobile scanners |
 | `GET` | `/api/v1/barcodes/scan/{scannedCode}` | Mobile scanner lookup resolving SKU into stock on-hand and facility bin coordinates |
 
-### 6. Bulk CSV Catalog Import & Export (`/api/v1/bulk`)
+### 7. Bulk CSV Catalog Import & Export (`/api/v1/bulk`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -129,7 +142,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/bulk/export/products` | Download entire product catalog as CSV spreadsheet |
 | `GET` | `/api/v1/bulk/export/template` | Download blank starter CSV template for supplier/catalog onboarding |
 
-### 7. Real-Time Webhooks (`/api/v1/webhooks`)
+### 8. Real-Time Webhooks (`/api/v1/webhooks`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -141,7 +154,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/webhooks/{id}/deliveries` | View recent delivery attempt audit logs and HTTP status codes |
 | `POST` | `/api/v1/webhooks/{id}/test` | Execute a live ping test with HMAC signature |
 
-### 8. Suppliers & Procurement (`/api/v1/suppliers`)
+### 9. Suppliers & Procurement (`/api/v1/suppliers`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -151,7 +164,7 @@ Once running, navigate to:
 | `POST` | `/api/v1/suppliers` | Register new supplier vendor |
 | `PUT` | `/api/v1/suppliers/{id}` | Update supplier profile and lead times |
 
-### 9. Automated Replenishment & Purchase Orders (`/api/v1/purchase-orders`)
+### 10. Automated Replenishment & Purchase Orders (`/api/v1/purchase-orders`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -164,7 +177,7 @@ Once running, navigate to:
 | `POST` | `/api/v1/purchase-orders/{id}/receive` | Receive shipment intake, increment warehouse stock, and recalculate unit costs |
 | `POST` | `/api/v1/purchase-orders/{id}/cancel` | Cancel an open purchase order |
 
-### 10. Stock Movements & Transactions (`/api/v1/inventory`)
+### 11. Stock Movements & Transactions (`/api/v1/inventory`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -174,7 +187,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/inventory/transactions` | Paginated transaction audit log with date range and product filtering |
 | `GET` | `/api/v1/inventory/transactions/product/{productId}` | Retrieve transaction history for a specific product |
 
-### 11. Business Intelligence & Analytics (`/api/v1/inventory/summary`)
+### 12. Business Intelligence & Analytics (`/api/v1/inventory/summary`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -183,21 +196,27 @@ Once running, navigate to:
 
 ## Sample `curl` Requests
 
-### Register a Webhook Subscription
+### Querying Expiring Inventory Batches
 ```bash
-curl -X POST "http://localhost:5000/api/v1/webhooks" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Slack Warehouse Alerts",
-    "targetUrl": "https://hooks.slack.com/services/T00/B00/X00",
-    "secretKey": "super_secure_webhook_secret_key",
-    "subscribedEvents": "StockLow,StockOut,TransferShipped"
-  }'
+curl -X GET "http://localhost:5000/api/v1/lots/expiring?daysThreshold=30"
 ```
 
-### Test Webhook Endpoint Ping
+### Computing FEFO Allocation Recommendation
 ```bash
-curl -X POST "http://localhost:5000/api/v1/webhooks/1/test"
+curl -X GET "http://localhost:5000/api/v1/lots/fefo-plan?productId=8&quantity=10&warehouseId=1"
+```
+
+### Executing FEFO Batch Dispatch
+```bash
+curl -X POST "http://localhost:5000/api/v1/lots/dispatch-fefo" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "productId": 8,
+    "warehouseId": 1,
+    "quantity": 10,
+    "referenceNumber": "SO-2026-8910",
+    "reason": "Expedited Customer Shipment"
+  }'
 ```
 
 ## Running Tests
@@ -210,4 +229,4 @@ dotnet test
 
 ## Architecture Notes
 
-The Inventory Tracker API is structured following domain-driven separation of concerns and clean architecture principles. Outbound webhook events are cryptographically signed using SHA-256 HMAC algorithms with subscriber-specific secret keys (`X-Inventory-Signature-256`), providing downstream listeners with non-repudiation and replay protection. All dispatch attempts, HTTP status codes, and execution durations are recorded immutably for diagnostic auditability.
+The Inventory Tracker API follows strict domain-driven design and clean architecture principles. Batch lots enforce physical traceability: products can be flagged with `IsLotTracked`, enabling warehouse-level lot isolation with distinct manufacturing and expiration dates. The FEFO allocation engine guarantees that oldest / soonest-expiring stock is allocated first, mitigating spoil/scrap risk and maintaining FIFO/FEFO accounting compliance.

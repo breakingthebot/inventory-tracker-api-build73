@@ -382,6 +382,59 @@ public static class DbInitializer
 
         await context.Users.AddRangeAsync(users);
         await context.SaveChangesAsync();
+
+        // 10. Seed Sample Batch / Product Lots
+        var lots = new List<ProductLot>
+        {
+            new()
+            {
+                ProductId = products[7].Id, // APP-GLV-NIT100
+                WarehouseId = whEast,
+                LotNumber = "LOT-2026-NIT01",
+                QuantityInitial = 25,
+                QuantityOnHand = 5,
+                QuantityReserved = 0,
+                ManufactureDateUtc = DateTime.UtcNow.AddMonths(-6),
+                ExpirationDateUtc = DateTime.UtcNow.AddDays(15), // Expiring soon in 15 days
+                Status = LotStatus.Active,
+                ReceivedAtUtc = DateTime.UtcNow.AddMonths(-5),
+                Notes = "Batch 1 from Apex Industrial - Quality passed"
+            },
+            new()
+            {
+                ProductId = products[7].Id, // APP-GLV-NIT100
+                WarehouseId = whEast,
+                LotNumber = "LOT-2026-NIT02",
+                QuantityInitial = 50,
+                QuantityOnHand = 40,
+                QuantityReserved = 0,
+                ManufactureDateUtc = DateTime.UtcNow.AddMonths(-1),
+                ExpirationDateUtc = DateTime.UtcNow.AddMonths(18), // Fresh batch
+                Status = LotStatus.Active,
+                ReceivedAtUtc = DateTime.UtcNow.AddDays(-20),
+                Notes = "Batch 2 from Apex Industrial - Fresh stock"
+            },
+            new()
+            {
+                ProductId = products[3].Id, // OFF-PAP-A4500
+                WarehouseId = whEast,
+                LotNumber = "LOT-2026-PAP01",
+                QuantityInitial = 120,
+                QuantityOnHand = 45,
+                QuantityReserved = 0,
+                ManufactureDateUtc = DateTime.UtcNow.AddMonths(-4),
+                ExpirationDateUtc = DateTime.UtcNow.AddDays(45), // Expiring in 45 days
+                Status = LotStatus.Active,
+                ReceivedAtUtc = DateTime.UtcNow.AddMonths(-3),
+                Notes = "Moisture barrier seal checked"
+            }
+        };
+
+        products[7].IsLotTracked = true;
+        products[3].IsLotTracked = true;
+
+        await context.ProductLots.AddRangeAsync(lots);
+        await context.SaveChangesAsync();
     }
 
     private static User CreateSeedUser(string username, string email, string fullName, string password, UserRole role)

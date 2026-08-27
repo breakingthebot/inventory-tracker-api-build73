@@ -79,4 +79,9 @@ public class Warehouse
     /// Navigation collection of inbound stock transfers routed to this facility.
     /// </summary>
     public ICollection<StockTransfer> InboundTransfers { get; set; } = new List<StockTransfer>();
+
+    /// <summary>
+    /// Navigation collection of specific batch lots stored at this facility.
+    /// </summary>
+    public ICollection<ProductLot> ProductLots { get; set; } = new List<ProductLot>();
 }

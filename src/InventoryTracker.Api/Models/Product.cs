@@ -81,6 +81,11 @@ public class Product
     public string UnitOfMeasure { get; set; } = "pcs";
 
     /// <summary>
+    /// Flag indicating whether this product enforces batch lot numbers and expiration dates.
+    /// </summary>
+    public bool IsLotTracked { get; set; } = false;
+
+    /// <summary>
     /// Flag indicating whether the product is actively stocked.
     /// </summary>
     public bool IsActive { get; set; } = true;
@@ -109,4 +114,9 @@ public class Product
     /// Navigation collection of transfer order items involving this product.
     /// </summary>
     public ICollection<StockTransferItem> TransferItems { get; set; } = new List<StockTransferItem>();
+
+    /// <summary>
+    /// Navigation collection of specific batch lots associated with this product.
+    /// </summary>
+    public ICollection<ProductLot> ProductLots { get; set; } = new List<ProductLot>();
 }

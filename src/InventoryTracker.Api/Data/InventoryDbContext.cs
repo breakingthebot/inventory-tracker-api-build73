@@ -30,6 +30,7 @@ public class InventoryDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<WebhookSubscription> WebhookSubscriptions => Set<WebhookSubscription>();
     public DbSet<WebhookDeliveryLog> WebhookDeliveryLogs => Set<WebhookDeliveryLog>();
+    public DbSet<ProductLot> ProductLots => Set<ProductLot>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -261,6 +262,28 @@ public class InventoryDbContext : DbContext
             entity.HasIndex(wdl => wdl.WebhookSubscriptionId);
             entity.HasIndex(wdl => wdl.TimestampUtc);
             entity.HasIndex(wdl => wdl.IsSuccess);
+        });
+
+        // ProductLot Configuration
+        modelBuilder.Entity<ProductLot>(entity =>
+        {
+            entity.HasKey(pl => pl.Id);
+            entity.Property(pl => pl.LotNumber).IsRequired().HasMaxLength(50);
+            entity.Property(pl => pl.Notes).HasMaxLength(500);
+
+            entity.HasOne(pl => pl.Product)
+                  .WithMany(p => p.ProductLots)
+                  .HasForeignKey(pl => pl.ProductId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(pl => pl.Warehouse)
+                  .WithMany(w => w.ProductLots)
+                  .HasForeignKey(pl => pl.WarehouseId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(pl => new { pl.ProductId, pl.WarehouseId, pl.LotNumber }).IsUnique();
+            entity.HasIndex(pl => pl.ExpirationDateUtc);
+            entity.HasIndex(pl => pl.Status);
         });
     }
 }
