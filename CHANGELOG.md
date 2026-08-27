@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-08-27
+
+### Added
+- **Outbound Webhooks & Event Notifications (`WebhooksController`)**:
+  - `WebhookSubscription` and `WebhookDeliveryLog` models.
+  - `GET /api/v1/webhooks`: List all webhook listener subscriptions.
+  - `GET /api/v1/webhooks/{id}`: Detailed webhook subscription retrieval.
+  - `POST /api/v1/webhooks`: Register new webhook listener with HMAC secret.
+  - `PUT /api/v1/webhooks/{id}`: Update endpoint URL or subscribed event filters.
+  - `DELETE /api/v1/webhooks/{id}`: Remove webhook subscription.
+  - `GET /api/v1/webhooks/{id}/deliveries`: View recent delivery attempt audit logs, HTTP status codes, and execution duration.
+  - `POST /api/v1/webhooks/{id}/test`: Execute live verification ping with HMAC signature.
+- **HMAC-SHA256 Security**: Outbound payloads signed with `X-Inventory-Signature-256` and `X-Inventory-Event` headers.
+- **Test Suite Expansion**: Added 5 new unit and controller tests in `WebhookServiceTests` and `WebhooksControllerTests`, expanding test coverage to 56 unit and integration tests with a 100% pass rate.
+
 ## [1.4.0] - 2026-08-27
 
 ### Added

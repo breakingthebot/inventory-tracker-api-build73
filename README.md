@@ -1,12 +1,13 @@
 # Inventory Tracker API (Build 73)
 
-A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0, Entity Framework Core, SQL Server / In-Memory persistence, multi-warehouse location partitioning, inter-warehouse stock transfers, automated replenishment purchase orders, vector SVG barcode/QR generation, mobile handheld scanner lookup, CSV bulk catalog import/export, Role-Based Access Control (RBAC), JWT authentication, transaction auditing, and real-time business valuation analytics.
+A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0, Entity Framework Core, SQL Server / In-Memory persistence, multi-warehouse location partitioning, inter-warehouse stock transfers, automated replenishment purchase orders, vector SVG barcode/QR generation, mobile handheld scanner lookup, CSV bulk catalog import/export, outbound webhooks with HMAC-SHA256 signatures, Role-Based Access Control (RBAC), JWT authentication, transaction auditing, and real-time business valuation analytics.
 
 ## Stack
 
 - **Language / Runtime**: C# 12 / .NET 8.0 SDK
 - **Framework**: ASP.NET Core Web API
 - **Security / Authentication**: JWT Bearer Tokens, HMAC-SHA256 PBKDF2 Password Hashing, RBAC
+- **Integration**: Outbound Webhooks with HMAC-SHA256 signature headers (`X-Inventory-Signature-256`)
 - **ORM / Persistence**: Entity Framework Core 8.0 (SQL Server & In-Memory providers)
 - **API Documentation**: OpenAPI 3.0 / Swagger UI (`Swashbuckle.AspNetCore`) with Bearer Security Scheme
 - **Testing**: xUnit, Moq, Microsoft.EntityFrameworkCore.InMemory
@@ -128,7 +129,19 @@ Once running, navigate to:
 | `GET` | `/api/v1/bulk/export/products` | Download entire product catalog as CSV spreadsheet |
 | `GET` | `/api/v1/bulk/export/template` | Download blank starter CSV template for supplier/catalog onboarding |
 
-### 7. Suppliers & Procurement (`/api/v1/suppliers`)
+### 7. Real-Time Webhooks (`/api/v1/webhooks`)
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/webhooks` | List all registered outbound webhook subscriptions |
+| `GET` | `/api/v1/webhooks/{id}` | Retrieve webhook subscription by ID |
+| `POST` | `/api/v1/webhooks` | Register a new webhook listener with HMAC secret |
+| `PUT` | `/api/v1/webhooks/{id}` | Update webhook endpoint URL or subscribed event list |
+| `DELETE` | `/api/v1/webhooks/{id}` | Remove webhook subscription |
+| `GET` | `/api/v1/webhooks/{id}/deliveries` | View recent delivery attempt audit logs and HTTP status codes |
+| `POST` | `/api/v1/webhooks/{id}/test` | Execute a live ping test with HMAC signature |
+
+### 8. Suppliers & Procurement (`/api/v1/suppliers`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -138,7 +151,7 @@ Once running, navigate to:
 | `POST` | `/api/v1/suppliers` | Register new supplier vendor |
 | `PUT` | `/api/v1/suppliers/{id}` | Update supplier profile and lead times |
 
-### 8. Automated Replenishment & Purchase Orders (`/api/v1/purchase-orders`)
+### 9. Automated Replenishment & Purchase Orders (`/api/v1/purchase-orders`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -151,7 +164,7 @@ Once running, navigate to:
 | `POST` | `/api/v1/purchase-orders/{id}/receive` | Receive shipment intake, increment warehouse stock, and recalculate unit costs |
 | `POST` | `/api/v1/purchase-orders/{id}/cancel` | Cancel an open purchase order |
 
-### 9. Stock Movements & Transactions (`/api/v1/inventory`)
+### 10. Stock Movements & Transactions (`/api/v1/inventory`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -161,7 +174,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/inventory/transactions` | Paginated transaction audit log with date range and product filtering |
 | `GET` | `/api/v1/inventory/transactions/product/{productId}` | Retrieve transaction history for a specific product |
 
-### 10. Business Intelligence & Analytics (`/api/v1/inventory/summary`)
+### 11. Business Intelligence & Analytics (`/api/v1/inventory/summary`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -170,23 +183,21 @@ Once running, navigate to:
 
 ## Sample `curl` Requests
 
-### User Login & Token Acquisition
+### Register a Webhook Subscription
 ```bash
-curl -X POST "http://localhost:5000/api/v1/auth/login" \
+curl -X POST "http://localhost:5000/api/v1/webhooks" \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "admin",
-    "password": "AdminPass123!"
+    "name": "Slack Warehouse Alerts",
+    "targetUrl": "https://hooks.slack.com/services/T00/B00/X00",
+    "secretKey": "super_secure_webhook_secret_key",
+    "subscribedEvents": "StockLow,StockOut,TransferShipped"
   }'
 ```
 
-### Accessing Authenticated Endpoints
+### Test Webhook Endpoint Ping
 ```bash
-# Export the returned token
-export TOKEN="<your-jwt-token-here>"
-
-curl -X GET "http://localhost:5000/api/v1/auth/me" \
-  -H "Authorization: Bearer $TOKEN"
+curl -X POST "http://localhost:5000/api/v1/webhooks/1/test"
 ```
 
 ## Running Tests
@@ -199,6 +210,4 @@ dotnet test
 
 ## Architecture Notes
 
-The Inventory Tracker API is structured following domain-driven separation of concerns and clean architecture principles. Domain models (`Product`, `Category`, `Warehouse`, `WarehouseStock`, `StockTransfer`, `Supplier`, `PurchaseOrder`, `PurchaseOrderItem`, `User`, `InventoryTransaction`) represent physical logistics structures with strict integrity constraints.
-
-Authentication utilizes standard ASP.NET Core JWT Bearer validation with HMAC-SHA256 signatures and PBKDF2 password hashing with 100,000 iterations and per-user cryptographic salts. The Swagger UI is equipped with an interactive OpenAPI security scheme, allowing developers to test protected endpoints directly in the browser.
+The Inventory Tracker API is structured following domain-driven separation of concerns and clean architecture principles. Outbound webhook events are cryptographically signed using SHA-256 HMAC algorithms with subscriber-specific secret keys (`X-Inventory-Signature-256`), providing downstream listeners with non-repudiation and replay protection. All dispatch attempts, HTTP status codes, and execution durations are recorded immutably for diagnostic auditability.

@@ -80,6 +80,7 @@ builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
 builder.Services.AddScoped<IBarcodeService, BarcodeService>();
 builder.Services.AddScoped<IBulkDataService, BulkDataService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddHttpClient<IWebhookService, WebhookService>();
 
 // Configure OpenAPI / Swagger Documentation with JWT Bearer Security
 builder.Services.AddEndpointsApiExplorer();

@@ -28,6 +28,8 @@ public class InventoryDbContext : DbContext
     public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
     public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<WebhookSubscription> WebhookSubscriptions => Set<WebhookSubscription>();
+    public DbSet<WebhookDeliveryLog> WebhookDeliveryLogs => Set<WebhookDeliveryLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -231,6 +233,34 @@ public class InventoryDbContext : DbContext
             entity.Property(u => u.Salt).IsRequired();
             entity.HasIndex(u => u.Role);
             entity.HasIndex(u => u.IsActive);
+        });
+
+        // WebhookSubscription Configuration
+        modelBuilder.Entity<WebhookSubscription>(entity =>
+        {
+            entity.HasKey(ws => ws.Id);
+            entity.Property(ws => ws.Name).IsRequired().HasMaxLength(100);
+            entity.Property(ws => ws.TargetUrl).IsRequired().HasMaxLength(300);
+            entity.Property(ws => ws.SecretKey).IsRequired().HasMaxLength(100);
+            entity.Property(ws => ws.SubscribedEvents).IsRequired().HasMaxLength(200).HasDefaultValue("*");
+            entity.HasIndex(ws => ws.IsActive);
+        });
+
+        // WebhookDeliveryLog Configuration
+        modelBuilder.Entity<WebhookDeliveryLog>(entity =>
+        {
+            entity.HasKey(wdl => wdl.Id);
+            entity.Property(wdl => wdl.PayloadJson).IsRequired();
+            entity.Property(wdl => wdl.ErrorMessage).HasMaxLength(500);
+
+            entity.HasOne(wdl => wdl.WebhookSubscription)
+                  .WithMany(ws => ws.DeliveryLogs)
+                  .HasForeignKey(wdl => wdl.WebhookSubscriptionId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(wdl => wdl.WebhookSubscriptionId);
+            entity.HasIndex(wdl => wdl.TimestampUtc);
+            entity.HasIndex(wdl => wdl.IsSuccess);
         });
     }
 }
