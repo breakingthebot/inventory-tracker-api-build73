@@ -94,4 +94,9 @@ public class Warehouse
     /// Navigation collection of kit assembly runs executed at this facility.
     /// </summary>
     public ICollection<KitAssemblyOrder> AssemblyOrders { get; set; } = new List<KitAssemblyOrder>();
+
+    /// <summary>
+    /// Navigation collection of customer sales orders fulfilled from this facility.
+    /// </summary>
+    public ICollection<SalesOrder> SalesOrders { get; set; } = new List<SalesOrder>();
 }

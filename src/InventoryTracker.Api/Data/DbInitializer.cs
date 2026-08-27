@@ -543,6 +543,77 @@ public static class DbInitializer
 
         await context.BillOfMaterials.AddRangeAsync(bomEntries);
         await context.SaveChangesAsync();
+
+        // 13. Seed Sample Customers & Sales Order Fulfillment Pipeline
+        var customer1 = new Customer
+        {
+            CustomerCode = "CUST-1001",
+            CompanyName = "Meridian Healthcare Logistics",
+            ContactName = "Dr. Laura Vance",
+            Email = "purchasing@meridianhealth.org",
+            Phone = "+1-404-555-0199",
+            ShippingAddress = "750 Peachtree St NE",
+            ShippingCity = "Atlanta",
+            ShippingState = "GA",
+            ShippingPostalCode = "30308",
+            ShippingCountry = "USA",
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow.AddMonths(-3)
+        };
+
+        var customer2 = new Customer
+        {
+            CustomerCode = "CUST-1002",
+            CompanyName = "Vanguard Digital Media",
+            ContactName = "Marcus Brody",
+            Email = "ops@vanguarddigital.com",
+            Phone = "+1-512-555-0144",
+            ShippingAddress = "1100 Congress Ave",
+            ShippingCity = "Austin",
+            ShippingState = "TX",
+            ShippingPostalCode = "78701",
+            ShippingCountry = "USA",
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow.AddMonths(-2)
+        };
+
+        await context.Customers.AddRangeAsync(customer1, customer2);
+        await context.SaveChangesAsync();
+
+        var sampleOrder = new SalesOrder
+        {
+            OrderNumber = "SO-20260826-0001",
+            CustomerId = customer1.Id,
+            WarehouseId = whEast,
+            Status = SalesOrderStatus.Shipped,
+            Subtotal = 599.98m,
+            ShippingFee = 25.00m,
+            TaxAmount = 48.00m,
+            TotalAmount = 672.98m,
+            ShippingCarrier = "FedEx Ground",
+            TrackingNumber = "FDX-883920194829",
+            OrderDateUtc = DateTime.UtcNow.AddDays(-3),
+            AllocatedAtUtc = DateTime.UtcNow.AddDays(-3).AddHours(1),
+            PickedAtUtc = DateTime.UtcNow.AddDays(-2).AddHours(2),
+            PackedAtUtc = DateTime.UtcNow.AddDays(-2).AddHours(4),
+            ShippedAtUtc = DateTime.UtcNow.AddDays(-2).AddHours(6),
+            Notes = "Urgent medical supplies shipment",
+            Items = new List<SalesOrderItem>
+            {
+                new()
+                {
+                    ProductId = products[0].Id, // ELEC-MON-4K27
+                    QuantityOrdered = 2,
+                    QuantityPicked = 2,
+                    UnitPrice = 299.99m,
+                    UnitCostSnapshot = products[0].UnitCost,
+                    BinLocationSnapshot = "A-01-01"
+                }
+            }
+        };
+
+        await context.SalesOrders.AddAsync(sampleOrder);
+        await context.SaveChangesAsync();
     }
 
     private static User CreateSeedUser(string username, string email, string fullName, string password, UserRole role)

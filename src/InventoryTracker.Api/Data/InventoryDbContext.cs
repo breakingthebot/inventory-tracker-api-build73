@@ -35,6 +35,9 @@ public class InventoryDbContext : DbContext
     public DbSet<CycleCountItem> CycleCountItems => Set<CycleCountItem>();
     public DbSet<BillOfMaterials> BillOfMaterials => Set<BillOfMaterials>();
     public DbSet<KitAssemblyOrder> KitAssemblyOrders => Set<KitAssemblyOrder>();
+    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<SalesOrder> SalesOrders => Set<SalesOrder>();
+    public DbSet<SalesOrderItem> SalesOrderItems => Set<SalesOrderItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -375,6 +378,72 @@ public class InventoryDbContext : DbContext
                   .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasIndex(kao => kao.CreatedAtUtc);
+        });
+
+        // Customer Configuration
+        modelBuilder.Entity<Customer>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.CustomerCode).IsRequired().HasMaxLength(30);
+            entity.HasIndex(c => c.CustomerCode).IsUnique();
+            entity.Property(c => c.CompanyName).IsRequired().HasMaxLength(150);
+            entity.Property(c => c.Email).IsRequired().HasMaxLength(150);
+            entity.Property(c => c.Phone).HasMaxLength(30);
+            entity.Property(c => c.ShippingAddress).IsRequired().HasMaxLength(200);
+            entity.Property(c => c.ShippingCity).IsRequired().HasMaxLength(100);
+            entity.Property(c => c.ShippingState).IsRequired().HasMaxLength(50);
+            entity.Property(c => c.ShippingPostalCode).IsRequired().HasMaxLength(20);
+            entity.Property(c => c.ShippingCountry).IsRequired().HasMaxLength(50);
+        });
+
+        // SalesOrder Configuration
+        modelBuilder.Entity<SalesOrder>(entity =>
+        {
+            entity.HasKey(so => so.Id);
+            entity.Property(so => so.OrderNumber).IsRequired().HasMaxLength(50);
+            entity.HasIndex(so => so.OrderNumber).IsUnique();
+            entity.Property(so => so.Subtotal).HasPrecision(18, 2);
+            entity.Property(so => so.ShippingFee).HasPrecision(18, 2);
+            entity.Property(so => so.TaxAmount).HasPrecision(18, 2);
+            entity.Property(so => so.TotalAmount).HasPrecision(18, 2);
+            entity.Property(so => so.ShippingCarrier).HasMaxLength(50);
+            entity.Property(so => so.TrackingNumber).HasMaxLength(100);
+            entity.Property(so => so.Notes).HasMaxLength(500);
+
+            entity.HasOne(so => so.Customer)
+                  .WithMany(c => c.Orders)
+                  .HasForeignKey(so => so.CustomerId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(so => so.Warehouse)
+                  .WithMany(w => w.SalesOrders)
+                  .HasForeignKey(so => so.WarehouseId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(so => so.Status);
+            entity.HasIndex(so => so.OrderDateUtc);
+        });
+
+        // SalesOrderItem Configuration
+        modelBuilder.Entity<SalesOrderItem>(entity =>
+        {
+            entity.HasKey(soi => soi.Id);
+            entity.Property(soi => soi.UnitPrice).HasPrecision(18, 2);
+            entity.Property(soi => soi.UnitCostSnapshot).HasPrecision(18, 2);
+            entity.Property(soi => soi.BinLocationSnapshot).HasMaxLength(50);
+
+            entity.HasOne(soi => soi.SalesOrder)
+                  .WithMany(so => so.Items)
+                  .HasForeignKey(soi => soi.SalesOrderId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(soi => soi.Product)
+                  .WithMany()
+                  .HasForeignKey(soi => soi.ProductId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(soi => soi.SalesOrderId);
+            entity.HasIndex(soi => soi.ProductId);
         });
     }
 }

@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-08-27
+
+### Added
+- **Customer Sales Order Processing & Pick-Pack-Ship Pipeline (`SalesOrdersController` & `CustomersController`)**:
+  - `Customer`, `SalesOrder`, `SalesOrderItem`, and `SalesOrderStatus` domain models (`Draft`, `Allocated`, `Picked`, `Packed`, `Shipped`, `Delivered`, `Cancelled`).
+  - `GET /api/v1/customers`: List active customer accounts.
+  - `GET /api/v1/customers/{id}`: Detailed customer profile retrieval.
+  - `POST /api/v1/customers`: Register new customer purchasing profile.
+  - `PUT /api/v1/customers/{id}`: Update customer profile and shipping address.
+  - `GET /api/v1/sales-orders`: Query sales orders with status, customer, and warehouse filters.
+  - `GET /api/v1/sales-orders/{id}`: Detailed order retrieval with line items.
+  - `POST /api/v1/sales-orders`: Draft new customer sales order with line item calculations.
+  - `POST /api/v1/sales-orders/{id}/allocate`: Validate available inventory and reserve stock at fulfillment facility (`Draft` -> `Allocated`).
+  - `GET /api/v1/sales-orders/{id}/pick-list`: Generate bin-routed warehouse runner pick sheet.
+  - `POST /api/v1/sales-orders/{id}/pick`: Record physical warehouse picking completion (`Allocated` -> `Picked`).
+  - `POST /api/v1/sales-orders/{id}/pack`: Carton packing verification with carrier assignment (`Picked` -> `Packed`).
+  - `POST /api/v1/sales-orders/{id}/ship`: Dispatch shipment, deduct physical inventory, clear reserved stock, assign tracking number, log immutable transaction audits, and fire outbound webhooks (`Packed` -> `Shipped`).
+  - `POST /api/v1/sales-orders/{id}/cancel`: Void open sales orders and release any reserved inventory back to sellable stock.
+- **Seeded Customers & Order**: Initialized realistic corporate customer accounts (`CUST-1001`, `CUST-1002`) and historical shipped order (`SO-20260826-0001`) in `DbInitializer`.
+- **Test Suite Expansion**: Added 4 new unit and controller tests in `SalesOrderServiceTests` and `SalesOrdersControllerTests`, expanding test coverage to 72 unit and integration tests with a 100% pass rate.
+
 ## [1.8.0] - 2026-08-27
 
 ### Added
