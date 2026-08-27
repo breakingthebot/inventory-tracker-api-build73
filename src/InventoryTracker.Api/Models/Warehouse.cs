@@ -89,4 +89,9 @@ public class Warehouse
     /// Navigation collection of cycle count audit sessions conducted at this facility.
     /// </summary>
     public ICollection<CycleCount> CycleCounts { get; set; } = new List<CycleCount>();
+
+    /// <summary>
+    /// Navigation collection of kit assembly runs executed at this facility.
+    /// </summary>
+    public ICollection<KitAssemblyOrder> AssemblyOrders { get; set; } = new List<KitAssemblyOrder>();
 }

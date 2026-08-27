@@ -86,6 +86,11 @@ public class Product
     public bool IsLotTracked { get; set; } = false;
 
     /// <summary>
+    /// Flag indicating whether this product is a composite bundle or kit assembled from sub-components.
+    /// </summary>
+    public bool IsBundleOrKit { get; set; } = false;
+
+    /// <summary>
     /// Flag indicating whether the product is actively stocked.
     /// </summary>
     public bool IsActive { get; set; } = true;
@@ -119,4 +124,19 @@ public class Product
     /// Navigation collection of specific batch lots associated with this product.
     /// </summary>
     public ICollection<ProductLot> ProductLots { get; set; } = new List<ProductLot>();
+
+    /// <summary>
+    /// Navigation collection of component recipe requirements if this product is an assembled kit.
+    /// </summary>
+    public ICollection<BillOfMaterials> BomComponents { get; set; } = new List<BillOfMaterials>();
+
+    /// <summary>
+    /// Navigation collection of parent BOMs that consume this item as a sub-component.
+    /// </summary>
+    public ICollection<BillOfMaterials> UsedInBoms { get; set; } = new List<BillOfMaterials>();
+
+    /// <summary>
+    /// Navigation collection of assembly runs executed for this finished kit.
+    /// </summary>
+    public ICollection<KitAssemblyOrder> AssemblyOrders { get; set; } = new List<KitAssemblyOrder>();
 }

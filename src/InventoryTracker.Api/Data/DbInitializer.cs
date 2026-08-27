@@ -481,6 +481,68 @@ public static class DbInitializer
 
         await context.CycleCounts.AddAsync(sampleCycleCount);
         await context.SaveChangesAsync();
+
+        // 12. Seed Sample Composite Kit Product & Bill of Materials (BOM)
+        var kitProduct = new Product
+        {
+            Sku = "KIT-DESK-PRO",
+            Name = "Professional Workstation Setup Kit",
+            Description = "All-in-one workstation bundle containing 4K monitor, USB-C multi-port hub, and non-slip desk mat.",
+            CategoryId = categories[0].Id, // Electronics
+            UnitPrice = 499.99m,
+            UnitCost = 288.00m,
+            QuantityInStock = 5,
+            ReorderThreshold = 3,
+            ReorderQuantity = 15,
+            UnitOfMeasure = "kit",
+            IsBundleOrKit = true,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        await context.Products.AddAsync(kitProduct);
+        await context.SaveChangesAsync();
+
+        await context.WarehouseStocks.AddAsync(new WarehouseStock
+        {
+            WarehouseId = whEast,
+            ProductId = kitProduct.Id,
+            QuantityOnHand = 5,
+            QuantityReserved = 0,
+            BinLocation = "K-01-01",
+            UpdatedAtUtc = DateTime.UtcNow
+        });
+        await context.SaveChangesAsync();
+
+        var bomEntries = new List<BillOfMaterials>
+        {
+            new()
+            {
+                ParentProductId = kitProduct.Id,
+                ComponentProductId = products[0].Id, // ELEC-MON-4K27 ($210 cost)
+                QuantityRequired = 1,
+                ScrapPercentage = 0m,
+                Notes = "Primary 27-inch 4K display"
+            },
+            new()
+            {
+                ParentProductId = kitProduct.Id,
+                ComponentProductId = products[2].Id, // ELEC-HUB-USBC ($28 cost)
+                QuantityRequired = 1,
+                ScrapPercentage = 0m,
+                Notes = "7-in-1 USB-C expansion hub"
+            },
+            new()
+            {
+                ParentProductId = kitProduct.Id,
+                ComponentProductId = products[6].Id, // ACC-MAT-DESK ($11 cost)
+                QuantityRequired = 1,
+                ScrapPercentage = 0m,
+                Notes = "Non-slip padded desk protector"
+            }
+        };
+
+        await context.BillOfMaterials.AddRangeAsync(bomEntries);
+        await context.SaveChangesAsync();
     }
 
     private static User CreateSeedUser(string username, string email, string fullName, string password, UserRole role)

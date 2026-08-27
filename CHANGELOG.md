@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-08-27
+
+### Added
+- **Bill of Materials (BOM) & Kitting / Assembly Decomposition (`BomController`)**:
+  - `BillOfMaterials` and `KitAssemblyOrder` domain models.
+  - Added `IsBundleOrKit`, `BomComponents`, `UsedInBoms`, and `AssemblyOrders` navigation collections on `Product` and `Warehouse`.
+  - `GET /api/v1/bom/product/{productId}`: Full BOM recipe inspection, component cost roll-up calculation, and maximum assemblable yield analytics with bottleneck component identification (`LimitingComponentSku`).
+  - `POST /api/v1/bom/components`: Attach or modify sub-component requirements with scrap allowances.
+  - `DELETE /api/v1/bom/components`: Remove component requirements from kit recipes.
+  - `POST /api/v1/bom/assemble`: Execute atomic kit assembly runs deducting required sub-components, receiving finished kit units, recalculating weighted unit acquisition cost (including direct labor allocation), and logging audit transactions.
+  - `POST /api/v1/bom/disassemble`: Disassemble finished kits back into sub-component raw materials and restock warehouse balances.
+- **Seeded Product Kit**: Added `KIT-DESK-PRO` ("Professional Workstation Setup Kit") bundled with 4K Monitor, USB-C Hub, and Desk Mat in `DbInitializer`.
+- **Test Suite Expansion**: Added 4 new unit and controller tests in `BomServiceTests` and `BomControllerTests`, expanding test coverage to 68 unit and integration tests with a 100% pass rate.
+
 ## [1.7.0] - 2026-08-27
 
 ### Added

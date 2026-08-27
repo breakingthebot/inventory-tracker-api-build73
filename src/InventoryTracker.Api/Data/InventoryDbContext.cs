@@ -33,6 +33,8 @@ public class InventoryDbContext : DbContext
     public DbSet<ProductLot> ProductLots => Set<ProductLot>();
     public DbSet<CycleCount> CycleCounts => Set<CycleCount>();
     public DbSet<CycleCountItem> CycleCountItems => Set<CycleCountItem>();
+    public DbSet<BillOfMaterials> BillOfMaterials => Set<BillOfMaterials>();
+    public DbSet<KitAssemblyOrder> KitAssemblyOrders => Set<KitAssemblyOrder>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -329,6 +331,50 @@ public class InventoryDbContext : DbContext
 
             entity.HasIndex(cci => cci.CycleCountId);
             entity.HasIndex(cci => cci.ProductId);
+        });
+
+        // BillOfMaterials Configuration
+        modelBuilder.Entity<BillOfMaterials>(entity =>
+        {
+            entity.HasKey(bom => bom.Id);
+            entity.Property(bom => bom.ScrapPercentage).HasPrecision(5, 2);
+            entity.Property(bom => bom.Notes).HasMaxLength(300);
+
+            entity.HasOne(bom => bom.ParentProduct)
+                  .WithMany(p => p.BomComponents)
+                  .HasForeignKey(bom => bom.ParentProductId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(bom => bom.ComponentProduct)
+                  .WithMany(p => p.UsedInBoms)
+                  .HasForeignKey(bom => bom.ComponentProductId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(bom => new { bom.ParentProductId, bom.ComponentProductId }).IsUnique();
+        });
+
+        // KitAssemblyOrder Configuration
+        modelBuilder.Entity<KitAssemblyOrder>(entity =>
+        {
+            entity.HasKey(kao => kao.Id);
+            entity.Property(kao => kao.AssemblyNumber).IsRequired().HasMaxLength(50);
+            entity.HasIndex(kao => kao.AssemblyNumber).IsUnique();
+            entity.Property(kao => kao.LaborCost).HasPrecision(18, 2);
+            entity.Property(kao => kao.TotalUnitCost).HasPrecision(18, 2);
+            entity.Property(kao => kao.AssembledBy).IsRequired().HasMaxLength(50);
+            entity.Property(kao => kao.Notes).HasMaxLength(500);
+
+            entity.HasOne(kao => kao.KitProduct)
+                  .WithMany(p => p.AssemblyOrders)
+                  .HasForeignKey(kao => kao.KitProductId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(kao => kao.Warehouse)
+                  .WithMany(w => w.AssemblyOrders)
+                  .HasForeignKey(kao => kao.WarehouseId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(kao => kao.CreatedAtUtc);
         });
     }
 }

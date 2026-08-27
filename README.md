@@ -1,6 +1,6 @@
 # Inventory Tracker API (Build 73)
 
-A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0, Entity Framework Core, SQL Server / In-Memory persistence, multi-warehouse location partitioning, inter-warehouse stock transfers, automated replenishment purchase orders, vector SVG barcode/QR generation, mobile handheld scanner lookup, CSV bulk catalog import/export, outbound webhooks with HMAC-SHA256 signatures, batch lot & expiration tracking with FEFO dispatching, blind cycle counting & reconciliation audits, Role-Based Access Control (RBAC), JWT authentication, transaction auditing, and real-time business valuation analytics.
+A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0, Entity Framework Core, SQL Server / In-Memory persistence, multi-warehouse location partitioning, inter-warehouse stock transfers, automated replenishment purchase orders, vector SVG barcode/QR generation, mobile handheld scanner lookup, CSV bulk catalog import/export, outbound webhooks with HMAC-SHA256 signatures, batch lot & expiration tracking with FEFO dispatching, blind cycle counting & reconciliation audits, Bill of Materials (BOM) & kit assembly/disassembly, Role-Based Access Control (RBAC), JWT authentication, transaction auditing, and real-time business valuation analytics.
 
 ## Stack
 
@@ -9,6 +9,7 @@ A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0
 - **Security / Authentication**: JWT Bearer Tokens, HMAC-SHA256 PBKDF2 Password Hashing, RBAC
 - **Integration**: Outbound Webhooks with HMAC-SHA256 signature headers (`X-Inventory-Signature-256`)
 - **Inventory Allocation**: First-Expired, First-Out (FEFO) & First-In, First-Out (FIFO) Lot Tracking
+- **Manufacturing & Kitting**: Bill of Materials (BOM) Trees, Cost Roll-Up Engine, Assembly & Disassembly
 - **Audit & Compliance**: Cycle Counting with Blind Count Entry & Supervisor Reconciliation Ledger Adjustments
 - **ORM / Persistence**: Entity Framework Core 8.0 (SQL Server & In-Memory providers)
 - **API Documentation**: OpenAPI 3.0 / Swagger UI (`Swashbuckle.AspNetCore`) with Bearer Security Scheme
@@ -103,7 +104,17 @@ Once running, navigate to:
 | `GET` | `/api/v1/warehouses/{id}/stock` | List product on-hand, reserved, and available stock lines per facility |
 | `PUT` | `/api/v1/warehouses/{id}/stock/{productId}/bin` | Assign or update physical aisle/rack/shelf bin coordinates |
 
-### 4. Cycle Counting & Audit Reconciliation (`/api/v1/cycle-counts`)
+### 4. Bill of Materials (BOM) & Kitting (`/api/v1/bom`)
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/bom/product/{productId}` | Full BOM component tree, cost roll-ups, max yield analytics, and bottleneck SKU |
+| `POST` | `/api/v1/bom/components` | Attach or update component requirement in parent kit recipe |
+| `DELETE` | `/api/v1/bom/components` | Remove sub-component requirement from kit recipe |
+| `POST` | `/api/v1/bom/assemble` | Execute kit assembly run, deduct components, receive finished goods, and update cost |
+| `POST` | `/api/v1/bom/disassemble` | Disassemble finished kits back into raw sub-component inventory |
+
+### 5. Cycle Counting & Audit Reconciliation (`/api/v1/cycle-counts`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -116,7 +127,7 @@ Once running, navigate to:
 | `POST` | `/api/v1/cycle-counts/{id}/reconcile` | Approve discrepancies, post balancing ledger adjustments, and update stock |
 | `POST` | `/api/v1/cycle-counts/{id}/cancel` | Void open audit session without adjusting inventory |
 
-### 5. Product Lots & Expiration Tracking (`/api/v1/lots`)
+### 6. Product Lots & Expiration Tracking (`/api/v1/lots`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -128,7 +139,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/lots/fefo-plan` | Compute FEFO picking recommendation allocating from earliest-expiring active lots |
 | `POST` | `/api/v1/lots/dispatch-fefo` | Execute automated FEFO batch deduction, update lot balances, and log audits |
 
-### 6. Inter-Warehouse Stock Transfers (`/api/v1/transfers`)
+### 7. Inter-Warehouse Stock Transfers (`/api/v1/transfers`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -139,7 +150,7 @@ Once running, navigate to:
 | `POST` | `/api/v1/transfers/{id}/receive` | Confirm receipt, add destination inventory, and set status to `Received` |
 | `POST` | `/api/v1/transfers/{id}/cancel` | Cancel order before shipment and release reserved inventory |
 
-### 7. Barcodes & Handheld Scanner Resolution (`/api/v1/barcodes`)
+### 8. Barcodes & Handheld Scanner Resolution (`/api/v1/barcodes`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -148,7 +159,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/barcodes/qr/{sku}` | Generates 2D QR matrix SVG barcode for mobile scanners |
 | `GET` | `/api/v1/barcodes/scan/{scannedCode}` | Mobile scanner lookup resolving SKU into stock on-hand and facility bin coordinates |
 
-### 8. Bulk CSV Catalog Import & Export (`/api/v1/bulk`)
+### 9. Bulk CSV Catalog Import & Export (`/api/v1/bulk`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -156,7 +167,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/bulk/export/products` | Download entire product catalog as CSV spreadsheet |
 | `GET` | `/api/v1/bulk/export/template` | Download blank starter CSV template for supplier/catalog onboarding |
 
-### 9. Real-Time Webhooks (`/api/v1/webhooks`)
+### 10. Real-Time Webhooks (`/api/v1/webhooks`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -168,7 +179,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/webhooks/{id}/deliveries` | View recent delivery attempt audit logs and HTTP status codes |
 | `POST` | `/api/v1/webhooks/{id}/test` | Execute a live ping test with HMAC signature |
 
-### 10. Suppliers & Procurement (`/api/v1/suppliers`)
+### 11. Suppliers & Procurement (`/api/v1/suppliers`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -178,7 +189,7 @@ Once running, navigate to:
 | `POST` | `/api/v1/suppliers` | Register new supplier vendor |
 | `PUT` | `/api/v1/suppliers/{id}` | Update supplier profile and lead times |
 
-### 11. Automated Replenishment & Purchase Orders (`/api/v1/purchase-orders`)
+### 12. Automated Replenishment & Purchase Orders (`/api/v1/purchase-orders`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -191,7 +202,7 @@ Once running, navigate to:
 | `POST` | `/api/v1/purchase-orders/{id}/receive` | Receive shipment intake, increment warehouse stock, and recalculate unit costs |
 | `POST` | `/api/v1/purchase-orders/{id}/cancel` | Cancel an open purchase order |
 
-### 12. Stock Movements & Transactions (`/api/v1/inventory`)
+### 13. Stock Movements & Transactions (`/api/v1/inventory`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -201,7 +212,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/inventory/transactions` | Paginated transaction audit log with date range and product filtering |
 | `GET` | `/api/v1/inventory/transactions/product/{productId}` | Retrieve transaction history for a specific product |
 
-### 13. Business Intelligence & Analytics (`/api/v1/inventory/summary`)
+### 14. Business Intelligence & Analytics (`/api/v1/inventory/summary`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -210,30 +221,35 @@ Once running, navigate to:
 
 ## Sample `curl` Requests
 
-### Initiating a Physical Cycle Count
+### Inspecting BOM Recipe & Max Yield Analytics
 ```bash
-curl -X POST "http://localhost:5000/api/v1/cycle-counts" \
+curl -X GET "http://localhost:5000/api/v1/bom/product/9?warehouseId=1"
+```
+
+### Executing a Kit Assembly Production Run
+```bash
+curl -X POST "http://localhost:5000/api/v1/bom/assemble" \
   -H "Content-Type: application/json" \
   -d '{
+    "kitProductId": 9,
     "warehouseId": 1,
-    "scope": "Category:Electronics",
-    "initiatedBy": "admin",
-    "notes": "Q3 Routine Physical Count"
+    "quantity": 2,
+    "laborCost": 30.00,
+    "assembledBy": "lead_tech",
+    "notes": "Assembly run for Q3 order fulfillment"
   }'
 ```
 
-### Viewing Cycle Count Variance Discrepancy Report
+### Disassembling a Kit Back into Components
 ```bash
-curl -X GET "http://localhost:5000/api/v1/cycle-counts/1/variance-report"
-```
-
-### Reconciling Variances with Ledger Adjustments
-```bash
-curl -X POST "http://localhost:5000/api/v1/cycle-counts/1/reconcile" \
+curl -X POST "http://localhost:5000/api/v1/bom/disassemble" \
   -H "Content-Type: application/json" \
   -d '{
-    "approvedBy": "manager",
-    "notes": "Variances approved after physical verification"
+    "kitProductId": 9,
+    "warehouseId": 1,
+    "quantity": 1,
+    "disassembledBy": "clerk",
+    "reason": "Customer cancellation decomposition"
   }'
 ```
 
@@ -247,4 +263,4 @@ dotnet test
 
 ## Architecture Notes
 
-The Inventory Tracker API is architected around domain-driven rigor and strict audit accountability. Cycle counting provides blind physical audit integrity: system counts are snapshot at the moment an audit session is created, physical counts are entered without pre-populating expected numbers to avoid confirmation bias, and supervisor approvals automatically apply balanced inventory adjustments with immutable audit transactions.
+The Inventory Tracker API is architected around domain-driven rigor and clean separation of concerns. The Bill of Materials (BOM) engine enables light manufacturing and product kitting: parent kits dynamically compute rolled-up acquisition costs from child sub-components, maximum assemblable yield analytics identify inventory bottlenecks in real time, and assembly runs atomically consume sub-components while receiving finished goods into sellable stock.

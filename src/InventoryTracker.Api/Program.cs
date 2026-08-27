@@ -83,6 +83,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddHttpClient<IWebhookService, WebhookService>();
 builder.Services.AddScoped<ILotTrackingService, LotTrackingService>();
 builder.Services.AddScoped<ICycleCountService, CycleCountService>();
+builder.Services.AddScoped<IBomService, BomService>();
 
 // Configure OpenAPI / Swagger Documentation with JWT Bearer Security
 builder.Services.AddEndpointsApiExplorer();
