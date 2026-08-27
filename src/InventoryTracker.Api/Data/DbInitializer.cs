@@ -370,5 +370,44 @@ public static class DbInitializer
 
         await context.PurchaseOrders.AddAsync(samplePo);
         await context.SaveChangesAsync();
+
+        // 9. Seed Default Role-Based Access Control (RBAC) Operator Accounts
+        var users = new List<User>
+        {
+            CreateSeedUser("admin", "admin@inventorytracker.local", "System Administrator", "AdminPass123!", UserRole.Admin),
+            CreateSeedUser("manager", "manager@inventorytracker.local", "Warehouse Operations Manager", "ManagerPass123!", UserRole.WarehouseManager),
+            CreateSeedUser("clerk", "clerk@inventorytracker.local", "Inventory Stock Clerk", "ClerkPass123!", UserRole.Clerk),
+            CreateSeedUser("auditor", "auditor@inventorytracker.local", "Financial & Inventory Auditor", "AuditorPass123!", UserRole.Auditor)
+        };
+
+        await context.Users.AddRangeAsync(users);
+        await context.SaveChangesAsync();
+    }
+
+    private static User CreateSeedUser(string username, string email, string fullName, string password, UserRole role)
+    {
+        var saltBytes = new byte[16];
+        using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
+        rng.GetBytes(saltBytes);
+        var salt = Convert.ToBase64String(saltBytes);
+
+        var hashBytes = Microsoft.AspNetCore.Cryptography.KeyDerivation.KeyDerivation.Pbkdf2(
+            password: password,
+            salt: saltBytes,
+            prf: Microsoft.AspNetCore.Cryptography.KeyDerivation.KeyDerivationPrf.HMACSHA256,
+            iterationCount: 100000,
+            numBytesRequested: 32);
+
+        return new User
+        {
+            Username = username,
+            Email = email,
+            FullName = fullName,
+            PasswordHash = Convert.ToBase64String(hashBytes),
+            Salt = salt,
+            Role = role,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow
+        };
     }
 }

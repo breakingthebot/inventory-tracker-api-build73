@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-08-27
+
+### Added
+- **Role-Based Access Control (RBAC) & User Security**:
+  - `User` and `UserRole` models (`Admin`, `WarehouseManager`, `Clerk`, `Auditor`).
+  - Salted PBKDF2 HMAC-SHA256 password hashing (100,000 iterations).
+  - JWT Bearer token generation with claims (`NameIdentifier`, `Name`, `Email`, `Role`) and 24-hour expiration.
+  - Swagger UI Bearer token authorization dialog integration.
+- **Authentication Endpoints (`AuthController`)**:
+  - `POST /api/v1/auth/login`: Authenticates credentials and returns signed JWT Bearer access token.
+  - `POST /api/v1/auth/register`: Creates new operator account with specified role (`Admin` required).
+  - `GET /api/v1/auth/me`: Retrieves current authenticated user profile from token claims.
+  - `GET /api/v1/auth/users`: Lists all system operator accounts (`Admin` required).
+- **Default Seed Accounts**:
+  - `admin` (Role: `Admin`, Password: `AdminPass123!`)
+  - `manager` (Role: `WarehouseManager`, Password: `ManagerPass123!`)
+  - `clerk` (Role: `Clerk`, Password: `ClerkPass123!`)
+  - `auditor` (Role: `Auditor`, Password: `AuditorPass123!`)
+- **Test Suite Expansion**: Added 6 new unit and controller tests in `AuthServiceTests` and `AuthControllerTests`, expanding test coverage to 51 unit and integration tests with a 100% pass rate.
+
 ## [1.3.0] - 2026-08-27
 
 ### Added

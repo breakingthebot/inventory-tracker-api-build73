@@ -1,13 +1,14 @@
 # Inventory Tracker API (Build 73)
 
-A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0, Entity Framework Core, SQL Server / In-Memory persistence, multi-warehouse location partitioning, inter-warehouse stock transfers, automated replenishment purchase orders, vector SVG barcode/QR generation, mobile handheld scanner lookup, CSV bulk catalog import/export, transaction auditing, and real-time business valuation analytics.
+A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0, Entity Framework Core, SQL Server / In-Memory persistence, multi-warehouse location partitioning, inter-warehouse stock transfers, automated replenishment purchase orders, vector SVG barcode/QR generation, mobile handheld scanner lookup, CSV bulk catalog import/export, Role-Based Access Control (RBAC), JWT authentication, transaction auditing, and real-time business valuation analytics.
 
 ## Stack
 
 - **Language / Runtime**: C# 12 / .NET 8.0 SDK
 - **Framework**: ASP.NET Core Web API
+- **Security / Authentication**: JWT Bearer Tokens, HMAC-SHA256 PBKDF2 Password Hashing, RBAC
 - **ORM / Persistence**: Entity Framework Core 8.0 (SQL Server & In-Memory providers)
-- **API Documentation**: OpenAPI 3.0 / Swagger UI (`Swashbuckle.AspNetCore`)
+- **API Documentation**: OpenAPI 3.0 / Swagger UI (`Swashbuckle.AspNetCore`) with Bearer Security Scheme
 - **Testing**: xUnit, Moq, Microsoft.EntityFrameworkCore.InMemory
 - **CI/CD**: GitHub Actions (.NET 8 Build & Test pipeline)
 - **Architecture Pattern**: Clean Layered Architecture (Controllers -> DTOs -> Domain Services -> EF Core DbContext)
@@ -37,7 +38,19 @@ See `.env.example` for environment variable templates.
 | `ASPNETCORE_ENVIRONMENT` | Runtime environment name | `Development` |
 | `UseInMemoryDatabase` | Uses in-memory EF Core database for zero-config local run | `true` |
 | `ConnectionStrings__DefaultConnection` | SQL Server connection string | `Server=localhost;Database=InventoryTrackerDb;...` |
+| `Jwt__SecretKey` | HMAC secret key for signing JWT tokens | `InventoryTrackerApiSecretKey_Production_SuperSecret_2026_Key!` |
+| `Jwt__Issuer` | Token issuer identifier | `InventoryTrackerApi` |
+| `Jwt__Audience` | Token audience identifier | `InventoryTrackerClients` |
 | `Logging__LogLevel__Default` | Application logging threshold | `Information` |
+
+## Default Seed User Accounts
+
+| Username | Password | Role | Permissions |
+| :--- | :--- | :--- | :--- |
+| `admin` | `AdminPass123!` | `Admin` | Full administrative control, user account provisioning, system config |
+| `manager` | `ManagerPass123!` | `WarehouseManager` | PO auto-generation, inter-warehouse transfers, supplier management |
+| `clerk` | `ClerkPass123!` | `Clerk` | Stock dispatching, PO intake receiving, barcode scanning |
+| `auditor` | `AuditorPass123!` | `Auditor` | Financial valuation analytics, audit transaction logs, cycle counts |
 
 ## Running Locally
 
@@ -54,7 +67,16 @@ Once running, navigate to:
 
 ## API Endpoints Reference
 
-### 1. Product Catalog (`/api/v1/products`)
+### 1. Authentication & Users (`/api/v1/auth`)
+
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/auth/login` | Anonymous | Authenticates credentials and issues signed JWT Bearer token |
+| `POST` | `/api/v1/auth/register` | Admin | Creates new system operator account |
+| `GET` | `/api/v1/auth/me` | Authenticated | Retrieves current authenticated profile from token claims |
+| `GET` | `/api/v1/auth/users` | Admin | Lists all system operator accounts |
+
+### 2. Product Catalog (`/api/v1/products`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -66,7 +88,7 @@ Once running, navigate to:
 | `PUT` | `/api/v1/products/{id}` | Update product details, prices, and replenishment rules |
 | `DELETE` | `/api/v1/products/{id}` | Delete product (fails if on-hand stock is positive) |
 
-### 2. Warehouses & Facility Stock (`/api/v1/warehouses`)
+### 3. Warehouses & Facility Stock (`/api/v1/warehouses`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -78,7 +100,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/warehouses/{id}/stock` | List product on-hand, reserved, and available stock lines per facility |
 | `PUT` | `/api/v1/warehouses/{id}/stock/{productId}/bin` | Assign or update physical aisle/rack/shelf bin coordinates |
 
-### 3. Inter-Warehouse Stock Transfers (`/api/v1/transfers`)
+### 4. Inter-Warehouse Stock Transfers (`/api/v1/transfers`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -89,7 +111,7 @@ Once running, navigate to:
 | `POST` | `/api/v1/transfers/{id}/receive` | Confirm receipt, add destination inventory, and set status to `Received` |
 | `POST` | `/api/v1/transfers/{id}/cancel` | Cancel order before shipment and release reserved inventory |
 
-### 4. Barcodes & Handheld Scanner Resolution (`/api/v1/barcodes`)
+### 5. Barcodes & Handheld Scanner Resolution (`/api/v1/barcodes`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -98,7 +120,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/barcodes/qr/{sku}` | Generates 2D QR matrix SVG barcode for mobile scanners |
 | `GET` | `/api/v1/barcodes/scan/{scannedCode}` | Mobile scanner lookup resolving SKU into stock on-hand and facility bin coordinates |
 
-### 5. Bulk CSV Catalog Import & Export (`/api/v1/bulk`)
+### 6. Bulk CSV Catalog Import & Export (`/api/v1/bulk`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -106,7 +128,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/bulk/export/products` | Download entire product catalog as CSV spreadsheet |
 | `GET` | `/api/v1/bulk/export/template` | Download blank starter CSV template for supplier/catalog onboarding |
 
-### 6. Suppliers & Procurement (`/api/v1/suppliers`)
+### 7. Suppliers & Procurement (`/api/v1/suppliers`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -116,7 +138,7 @@ Once running, navigate to:
 | `POST` | `/api/v1/suppliers` | Register new supplier vendor |
 | `PUT` | `/api/v1/suppliers/{id}` | Update supplier profile and lead times |
 
-### 7. Automated Replenishment & Purchase Orders (`/api/v1/purchase-orders`)
+### 8. Automated Replenishment & Purchase Orders (`/api/v1/purchase-orders`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -129,7 +151,7 @@ Once running, navigate to:
 | `POST` | `/api/v1/purchase-orders/{id}/receive` | Receive shipment intake, increment warehouse stock, and recalculate unit costs |
 | `POST` | `/api/v1/purchase-orders/{id}/cancel` | Cancel an open purchase order |
 
-### 8. Stock Movements & Transactions (`/api/v1/inventory`)
+### 9. Stock Movements & Transactions (`/api/v1/inventory`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -139,7 +161,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/inventory/transactions` | Paginated transaction audit log with date range and product filtering |
 | `GET` | `/api/v1/inventory/transactions/product/{productId}` | Retrieve transaction history for a specific product |
 
-### 9. Business Intelligence & Analytics (`/api/v1/inventory/summary`)
+### 10. Business Intelligence & Analytics (`/api/v1/inventory/summary`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -148,26 +170,23 @@ Once running, navigate to:
 
 ## Sample `curl` Requests
 
-### Generate a Code 128 Vector Barcode
+### User Login & Token Acquisition
 ```bash
-curl -X GET "http://localhost:5000/api/v1/barcodes/sku/ELEC-MON-4K27"
+curl -X POST "http://localhost:5000/api/v1/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin",
+    "password": "AdminPass123!"
+  }'
 ```
 
-### Scan a Barcode on Mobile Terminal
+### Accessing Authenticated Endpoints
 ```bash
-curl -X GET "http://localhost:5000/api/v1/barcodes/scan/ELEC-MON-4K27"
-```
+# Export the returned token
+export TOKEN="<your-jwt-token-here>"
 
-### Bulk Import Products via CSV
-```bash
-curl -X POST "http://localhost:5000/api/v1/bulk/import/products" \
-  -H "Content-Type: text/csv" \
-  --data-binary $'Sku,Name,Category,UnitPrice,UnitCost,QuantityInStock,ReorderThreshold,ReorderQuantity\nELEC-DOCK-60W,USB-C 60W Dock,Electronics,79.99,35.00,50,15,30'
-```
-
-### Download Product Catalog CSV Export
-```bash
-curl -X GET "http://localhost:5000/api/v1/bulk/export/products" -o catalog-export.csv
+curl -X GET "http://localhost:5000/api/v1/auth/me" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ## Running Tests
@@ -180,6 +199,6 @@ dotnet test
 
 ## Architecture Notes
 
-The Inventory Tracker API is structured following domain-driven separation of concerns and clean architecture principles. Domain models (`Product`, `Category`, `Warehouse`, `WarehouseStock`, `StockTransfer`, `Supplier`, `PurchaseOrder`, `PurchaseOrderItem`, `InventoryTransaction`) represent physical logistics structures with strict integrity constraints.
+The Inventory Tracker API is structured following domain-driven separation of concerns and clean architecture principles. Domain models (`Product`, `Category`, `Warehouse`, `WarehouseStock`, `StockTransfer`, `Supplier`, `PurchaseOrder`, `PurchaseOrderItem`, `User`, `InventoryTransaction`) represent physical logistics structures with strict integrity constraints.
 
-Vector barcode generation leverages direct SVG path/rect mathematical rendering for linear Code 128 and 2D QR matrix codes, avoiding third-party rendering bloat. Bulk CSV ingestion processes streams with culture-invariant formatting, field escaping, and comprehensive row-level error reporting, guaranteeing atomic multi-field upserts.
+Authentication utilizes standard ASP.NET Core JWT Bearer validation with HMAC-SHA256 signatures and PBKDF2 password hashing with 100,000 iterations and per-user cryptographic salts. The Swagger UI is equipped with an interactive OpenAPI security scheme, allowing developers to test protected endpoints directly in the browser.

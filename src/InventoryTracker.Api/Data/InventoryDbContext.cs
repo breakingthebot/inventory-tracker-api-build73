@@ -27,6 +27,7 @@ public class InventoryDbContext : DbContext
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
     public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
+    public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -215,6 +216,21 @@ public class InventoryDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(poi => poi.ProductId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // User Configuration
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasKey(u => u.Id);
+            entity.Property(u => u.Username).IsRequired().HasMaxLength(50);
+            entity.HasIndex(u => u.Username).IsUnique();
+            entity.Property(u => u.Email).IsRequired().HasMaxLength(150);
+            entity.HasIndex(u => u.Email).IsUnique();
+            entity.Property(u => u.FullName).IsRequired().HasMaxLength(100);
+            entity.Property(u => u.PasswordHash).IsRequired();
+            entity.Property(u => u.Salt).IsRequired();
+            entity.HasIndex(u => u.Role);
+            entity.HasIndex(u => u.IsActive);
         });
     }
 }
