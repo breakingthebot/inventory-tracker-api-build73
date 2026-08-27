@@ -1,6 +1,6 @@
 # Inventory Tracker API (Build 73)
 
-A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0, Entity Framework Core, SQL Server / In-Memory persistence, multi-warehouse location partitioning, inter-warehouse stock transfers, transaction auditing, and real-time business valuation analytics.
+A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0, Entity Framework Core, SQL Server / In-Memory persistence, multi-warehouse location partitioning, inter-warehouse stock transfers, automated replenishment purchase order (PO) generation, transaction auditing, and real-time business valuation analytics.
 
 ## Stack
 
@@ -89,7 +89,30 @@ Once running, navigate to:
 | `POST` | `/api/v1/transfers/{id}/receive` | Confirm receipt, add destination inventory, and set status to `Received` |
 | `POST` | `/api/v1/transfers/{id}/cancel` | Cancel order before shipment and release reserved inventory |
 
-### 4. Stock Movements & Transactions (`/api/v1/inventory`)
+### 4. Suppliers & Procurement (`/api/v1/suppliers`)
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/suppliers` | List active suppliers with contact details, lead times, and payment terms |
+| `GET` | `/api/v1/suppliers/{id}` | Retrieve supplier profile by ID |
+| `GET` | `/api/v1/suppliers/code/{code}` | Retrieve supplier profile by vendor code |
+| `POST` | `/api/v1/suppliers` | Register new supplier vendor |
+| `PUT` | `/api/v1/suppliers/{id}` | Update supplier profile and lead times |
+
+### 5. Automated Replenishment & Purchase Orders (`/api/v1/purchase-orders`)
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/purchase-orders` | Paginated list of purchase orders with status and vendor filters |
+| `GET` | `/api/v1/purchase-orders/{id}` | Retrieve purchase order with line item quantities and progress |
+| `GET` | `/api/v1/purchase-orders/suggestions` | Low-stock replenishment analysis with recommended reorder quantities |
+| `POST` | `/api/v1/purchase-orders/auto-generate` | Automated batch engine grouping low-stock items by vendor and drafting POs |
+| `POST` | `/api/v1/purchase-orders` | Manually draft a new purchase order |
+| `POST` | `/api/v1/purchase-orders/{id}/submit` | Submit draft PO to vendor (`Submitted`) |
+| `POST` | `/api/v1/purchase-orders/{id}/receive` | Receive shipment intake, increment warehouse stock, and recalculate unit costs |
+| `POST` | `/api/v1/purchase-orders/{id}/cancel` | Cancel an open purchase order |
+
+### 6. Stock Movements & Transactions (`/api/v1/inventory`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -99,7 +122,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/inventory/transactions` | Paginated transaction audit log with date range and product filtering |
 | `GET` | `/api/v1/inventory/transactions/product/{productId}` | Retrieve transaction history for a specific product |
 
-### 5. Business Intelligence & Analytics (`/api/v1/inventory/summary`)
+### 7. Business Intelligence & Analytics (`/api/v1/inventory/summary`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -108,56 +131,29 @@ Once running, navigate to:
 
 ## Sample `curl` Requests
 
-### Register a Warehouse Facility
+### Get Low-Stock Auto-Reorder Suggestions
 ```bash
-curl -X POST "http://localhost:5000/api/v1/warehouses" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "code": "WH-SOUTH",
-    "name": "Miami International Logistics Gateway",
-    "address": "7700 NW 37th Ave",
-    "city": "Miami",
-    "state": "FL",
-    "postalCode": "33147",
-    "country": "USA",
-    "capacityUnits": 18000
-  }'
+curl -X GET "http://localhost:5000/api/v1/purchase-orders/suggestions"
 ```
 
-### Initiate an Inter-Warehouse Transfer
+### Auto-Generate Draft POs for Low Stock Items
 ```bash
-curl -X POST "http://localhost:5000/api/v1/transfers" \
+curl -X POST "http://localhost:5000/api/v1/purchase-orders/auto-generate?defaultDestinationWarehouseId=1"
+```
+
+### Receive Goods on Purchase Order
+```bash
+curl -X POST "http://localhost:5000/api/v1/purchase-orders/1/receive" \
   -H "Content-Type: application/json" \
   -d '{
-    "sourceWarehouseId": 1,
-    "destinationWarehouseId": 3,
-    "requestedBy": "logistics_mgr",
-    "notes": "Emergency stock rebalance to Dallas depot",
-    "items": [
+    "receivedItems": [
       {
-        "productId": 1,
-        "quantity": 10
+        "purchaseOrderItemId": 1,
+        "quantityReceived": 75,
+        "actualUnitCost": 28.00
       }
-    ]
-  }'
-```
-
-### Ship Transfer Order
-```bash
-curl -X POST "http://localhost:5000/api/v1/transfers/1/ship" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "trackingNumber": "FDX-998241029",
-    "notes": "Loaded on Linehaul Trailer 40B"
-  }'
-```
-
-### Receive Transfer at Destination Warehouse
-```bash
-curl -X POST "http://localhost:5000/api/v1/transfers/1/receive" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "notes": "Inspected and slotted into Bin C-05-10"
+    ],
+    "notes": "Verified complete delivery on dock A"
   }'
 ```
 
@@ -171,8 +167,6 @@ dotnet test
 
 ## Architecture Notes
 
-The Inventory Tracker API is structured following domain-driven separation of concerns and clean architecture principles. Domain models (`Product`, `Category`, `Warehouse`, `WarehouseStock`, `StockTransfer`, `InventoryTransaction`) represent physical logistics structures with strict integrity constraints.
+The Inventory Tracker API is structured following domain-driven separation of concerns and clean architecture principles. Domain models (`Product`, `Category`, `Warehouse`, `WarehouseStock`, `StockTransfer`, `Supplier`, `PurchaseOrder`, `PurchaseOrderItem`, `InventoryTransaction`) represent physical logistics structures with strict integrity constraints.
 
-Inter-warehouse stock transfers follow a resilient multi-stage state machine (`Draft` -> `Pending` -> `InTransit` -> `Received` / `Cancelled`). Inventory is first reserved upon creation, deducted and audited as `StockOut` upon shipment, and incremented and audited as `StockIn` upon destination receiving. This prevents inventory double-counting while goods are physically on the road.
-
-Requests flow through `GlobalExceptionMiddleware` for unified error normalization, `RequestLoggingMiddleware` for performance monitoring, and standard ASP.NET Core dependency injection. The database provider is decoupled, enabling in-memory execution for rapid local prototyping and test execution alongside production SQL Server compatibility.
+The automated replenishment engine continuously scans stock levels across facilities, compares them against configured `ReorderThreshold` values, and computes economic order quantities. It automatically generates supplier-grouped draft Purchase Orders with delivery date projections based on vendor lead times. Intake receiving performs weighted average unit cost recalculation and synchronizes both facility-level and global catalog balances atomically.

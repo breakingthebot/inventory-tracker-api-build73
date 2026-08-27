@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace InventoryTracker.Api.Data;
 
 /// <summary>
-/// Entity Framework Core database context managing persistence for products, categories, warehouses, and transfers.
+/// Entity Framework Core database context managing persistence for products, categories, warehouses, suppliers, and purchase orders.
 /// </summary>
 public class InventoryDbContext : DbContext
 {
@@ -24,6 +24,9 @@ public class InventoryDbContext : DbContext
     public DbSet<WarehouseStock> WarehouseStocks => Set<WarehouseStock>();
     public DbSet<StockTransfer> StockTransfers => Set<StockTransfer>();
     public DbSet<StockTransferItem> StockTransferItems => Set<StockTransferItem>();
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
+    public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+    public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -36,6 +39,20 @@ public class InventoryDbContext : DbContext
             entity.Property(c => c.Name).IsRequired().HasMaxLength(100);
             entity.HasIndex(c => c.Name).IsUnique();
             entity.Property(c => c.Description).HasMaxLength(500);
+        });
+
+        // Supplier Configuration
+        modelBuilder.Entity<Supplier>(entity =>
+        {
+            entity.HasKey(s => s.Id);
+            entity.Property(s => s.Code).IsRequired().HasMaxLength(20);
+            entity.HasIndex(s => s.Code).IsUnique();
+            entity.Property(s => s.Name).IsRequired().HasMaxLength(100);
+            entity.Property(s => s.Email).IsRequired().HasMaxLength(150);
+            entity.Property(s => s.Phone).HasMaxLength(30);
+            entity.Property(s => s.ContactName).HasMaxLength(100);
+            entity.Property(s => s.PaymentTerms).HasMaxLength(50).HasDefaultValue("Net 30");
+            entity.HasIndex(s => s.IsActive);
         });
 
         // Product Configuration
@@ -56,7 +73,13 @@ public class InventoryDbContext : DbContext
                   .HasForeignKey(p => p.CategoryId)
                   .OnDelete(DeleteBehavior.Restrict);
 
+            entity.HasOne(p => p.PrimarySupplier)
+                  .WithMany(s => s.SourcedProducts)
+                  .HasForeignKey(p => p.PrimarySupplierId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
             entity.HasIndex(p => p.CategoryId);
+            entity.HasIndex(p => p.PrimarySupplierId);
             entity.HasIndex(p => p.IsActive);
         });
 
@@ -94,7 +117,7 @@ public class InventoryDbContext : DbContext
             entity.HasIndex(w => w.IsActive);
         });
 
-        // WarehouseStock Configuration (Composite uniqueness per Warehouse + Product)
+        // WarehouseStock Configuration
         modelBuilder.Entity<WarehouseStock>(entity =>
         {
             entity.HasKey(ws => ws.Id);
@@ -150,6 +173,47 @@ public class InventoryDbContext : DbContext
             entity.HasOne(sti => sti.Product)
                   .WithMany(p => p.TransferItems)
                   .HasForeignKey(sti => sti.ProductId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // PurchaseOrder Configuration
+        modelBuilder.Entity<PurchaseOrder>(entity =>
+        {
+            entity.HasKey(po => po.Id);
+            entity.Property(po => po.OrderNumber).IsRequired().HasMaxLength(50);
+            entity.HasIndex(po => po.OrderNumber).IsUnique();
+            entity.Property(po => po.CreatedBy).HasMaxLength(100);
+            entity.Property(po => po.Notes).HasMaxLength(500);
+            entity.Property(po => po.TotalEstimatedCost).HasPrecision(18, 2);
+
+            entity.HasOne(po => po.Supplier)
+                  .WithMany(s => s.PurchaseOrders)
+                  .HasForeignKey(po => po.SupplierId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(po => po.DestinationWarehouse)
+                  .WithMany()
+                  .HasForeignKey(po => po.DestinationWarehouseId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(po => po.Status);
+            entity.HasIndex(po => po.CreatedAtUtc);
+        });
+
+        // PurchaseOrderItem Configuration
+        modelBuilder.Entity<PurchaseOrderItem>(entity =>
+        {
+            entity.HasKey(poi => poi.Id);
+            entity.Property(poi => poi.UnitCost).HasPrecision(18, 2);
+
+            entity.HasOne(poi => poi.PurchaseOrder)
+                  .WithMany(po => po.Items)
+                  .HasForeignKey(poi => poi.PurchaseOrderId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(poi => poi.Product)
+                  .WithMany()
+                  .HasForeignKey(poi => poi.ProductId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
     }

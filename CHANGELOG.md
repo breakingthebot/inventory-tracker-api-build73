@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-08-27
+
+### Added
+- **Supplier & Purchase Order Models**: Added `Supplier`, `PurchaseOrder`, and `PurchaseOrderItem` domain entities with relational foreign keys, tracking numbers, and decimal price precision.
+- **Product Supplier Sourcing**: Updated `Product` model with `PrimarySupplierId` and lead time awareness.
+- **Supplier Management Endpoints (`SuppliersController`)**:
+  - `GET /api/v1/suppliers`: List active vendors with lead times and payment terms.
+  - `GET /api/v1/suppliers/{id}`: Detailed supplier retrieval by ID.
+  - `GET /api/v1/suppliers/code/{code}`: Supplier retrieval by unique code.
+  - `POST /api/v1/suppliers`: Register new vendor profile.
+  - `PUT /api/v1/suppliers/{id}`: Update vendor contact and terms.
+- **Automated Purchase Order Workflows (`PurchaseOrdersController`)**:
+  - `GET /api/v1/purchase-orders/suggestions`: Real-time replenishment analysis identifying low-stock and out-of-stock catalog deficits.
+  - `POST /api/v1/purchase-orders/auto-generate`: Automated engine grouping low-stock items by supplier and drafting POs with projected delivery dates.
+  - `POST /api/v1/purchase-orders`: Manual purchase order drafting.
+  - `POST /api/v1/purchase-orders/{id}/submit`: Transmit order to vendor (`Draft` -> `Submitted`).
+  - `POST /api/v1/purchase-orders/{id}/receive`: Record full/partial goods receipt, increment warehouse and product stock, log immutable `StockIn` transaction, and recalculate weighted average unit costs.
+  - `POST /api/v1/purchase-orders/{id}/cancel`: Void open purchase orders.
+- **Test Suite Expansion**: Added 7 new tests in `SupplierServiceTests`, `PurchaseOrderServiceTests`, and `PurchaseOrdersControllerTests`, reaching 34 passing tests with 100% success rate.
+
 ## [1.1.0] - 2026-08-27
 
 ### Added

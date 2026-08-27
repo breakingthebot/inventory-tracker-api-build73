@@ -41,6 +41,16 @@ public class Product
     public Category? Category { get; set; }
 
     /// <summary>
+    /// Optional foreign key referencing the primary vendor supplier.
+    /// </summary>
+    public int? PrimarySupplierId { get; set; }
+
+    /// <summary>
+    /// Navigation reference to the primary vendor supplier.
+    /// </summary>
+    public Supplier? PrimarySupplier { get; set; }
+
+    /// <summary>
     /// Retail sale unit price in USD.
     /// </summary>
     public decimal UnitPrice { get; set; }
