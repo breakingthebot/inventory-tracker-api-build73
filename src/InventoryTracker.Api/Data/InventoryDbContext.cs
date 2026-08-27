@@ -31,6 +31,8 @@ public class InventoryDbContext : DbContext
     public DbSet<WebhookSubscription> WebhookSubscriptions => Set<WebhookSubscription>();
     public DbSet<WebhookDeliveryLog> WebhookDeliveryLogs => Set<WebhookDeliveryLog>();
     public DbSet<ProductLot> ProductLots => Set<ProductLot>();
+    public DbSet<CycleCount> CycleCounts => Set<CycleCount>();
+    public DbSet<CycleCountItem> CycleCountItems => Set<CycleCountItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -284,6 +286,49 @@ public class InventoryDbContext : DbContext
             entity.HasIndex(pl => new { pl.ProductId, pl.WarehouseId, pl.LotNumber }).IsUnique();
             entity.HasIndex(pl => pl.ExpirationDateUtc);
             entity.HasIndex(pl => pl.Status);
+        });
+
+        // CycleCount Configuration
+        modelBuilder.Entity<CycleCount>(entity =>
+        {
+            entity.HasKey(cc => cc.Id);
+            entity.Property(cc => cc.CountNumber).IsRequired().HasMaxLength(50);
+            entity.HasIndex(cc => cc.CountNumber).IsUnique();
+            entity.Property(cc => cc.Scope).IsRequired().HasMaxLength(100);
+            entity.Property(cc => cc.InitiatedBy).IsRequired().HasMaxLength(50);
+            entity.Property(cc => cc.ReviewedBy).HasMaxLength(50);
+            entity.Property(cc => cc.TotalVarianceCost).HasPrecision(18, 2);
+            entity.Property(cc => cc.Notes).HasMaxLength(500);
+
+            entity.HasOne(cc => cc.Warehouse)
+                  .WithMany(w => w.CycleCounts)
+                  .HasForeignKey(cc => cc.WarehouseId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(cc => cc.Status);
+            entity.HasIndex(cc => cc.CreatedAtUtc);
+        });
+
+        // CycleCountItem Configuration
+        modelBuilder.Entity<CycleCountItem>(entity =>
+        {
+            entity.HasKey(cci => cci.Id);
+            entity.Property(cci => cci.UnitCost).HasPrecision(18, 2);
+            entity.Property(cci => cci.CountedBy).HasMaxLength(50);
+            entity.Property(cci => cci.Notes).HasMaxLength(500);
+
+            entity.HasOne(cci => cci.CycleCount)
+                  .WithMany(cc => cc.Items)
+                  .HasForeignKey(cci => cci.CycleCountId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(cci => cci.Product)
+                  .WithMany()
+                  .HasForeignKey(cci => cci.ProductId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(cci => cci.CycleCountId);
+            entity.HasIndex(cci => cci.ProductId);
         });
     }
 }

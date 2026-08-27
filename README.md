@@ -1,6 +1,6 @@
 # Inventory Tracker API (Build 73)
 
-A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0, Entity Framework Core, SQL Server / In-Memory persistence, multi-warehouse location partitioning, inter-warehouse stock transfers, automated replenishment purchase orders, vector SVG barcode/QR generation, mobile handheld scanner lookup, CSV bulk catalog import/export, outbound webhooks with HMAC-SHA256 signatures, batch lot & expiration tracking with FEFO dispatching, Role-Based Access Control (RBAC), JWT authentication, transaction auditing, and real-time business valuation analytics.
+A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0, Entity Framework Core, SQL Server / In-Memory persistence, multi-warehouse location partitioning, inter-warehouse stock transfers, automated replenishment purchase orders, vector SVG barcode/QR generation, mobile handheld scanner lookup, CSV bulk catalog import/export, outbound webhooks with HMAC-SHA256 signatures, batch lot & expiration tracking with FEFO dispatching, blind cycle counting & reconciliation audits, Role-Based Access Control (RBAC), JWT authentication, transaction auditing, and real-time business valuation analytics.
 
 ## Stack
 
@@ -9,6 +9,7 @@ A production-grade RESTful Inventory Tracker service built with ASP.NET Core 8.0
 - **Security / Authentication**: JWT Bearer Tokens, HMAC-SHA256 PBKDF2 Password Hashing, RBAC
 - **Integration**: Outbound Webhooks with HMAC-SHA256 signature headers (`X-Inventory-Signature-256`)
 - **Inventory Allocation**: First-Expired, First-Out (FEFO) & First-In, First-Out (FIFO) Lot Tracking
+- **Audit & Compliance**: Cycle Counting with Blind Count Entry & Supervisor Reconciliation Ledger Adjustments
 - **ORM / Persistence**: Entity Framework Core 8.0 (SQL Server & In-Memory providers)
 - **API Documentation**: OpenAPI 3.0 / Swagger UI (`Swashbuckle.AspNetCore`) with Bearer Security Scheme
 - **Testing**: xUnit, Moq, Microsoft.EntityFrameworkCore.InMemory
@@ -102,7 +103,20 @@ Once running, navigate to:
 | `GET` | `/api/v1/warehouses/{id}/stock` | List product on-hand, reserved, and available stock lines per facility |
 | `PUT` | `/api/v1/warehouses/{id}/stock/{productId}/bin` | Assign or update physical aisle/rack/shelf bin coordinates |
 
-### 4. Product Lots & Expiration Tracking (`/api/v1/lots`)
+### 4. Cycle Counting & Audit Reconciliation (`/api/v1/cycle-counts`)
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/cycle-counts` | List audit sessions with status and warehouse filters |
+| `GET` | `/api/v1/cycle-counts/{id}` | Retrieve audit session with line items and count progress |
+| `POST` | `/api/v1/cycle-counts` | Initiate audit session snapshotting current on-hand stock per facility |
+| `POST` | `/api/v1/cycle-counts/{id}/record-counts` | Batch record blind physical counts by warehouse clerks |
+| `POST` | `/api/v1/cycle-counts/{id}/submit-review` | Submit completed counts for supervisor review |
+| `GET` | `/api/v1/cycle-counts/{id}/variance-report` | Detailed variance report comparing counted vs system stock with accuracy rate % |
+| `POST` | `/api/v1/cycle-counts/{id}/reconcile` | Approve discrepancies, post balancing ledger adjustments, and update stock |
+| `POST` | `/api/v1/cycle-counts/{id}/cancel` | Void open audit session without adjusting inventory |
+
+### 5. Product Lots & Expiration Tracking (`/api/v1/lots`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -114,7 +128,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/lots/fefo-plan` | Compute FEFO picking recommendation allocating from earliest-expiring active lots |
 | `POST` | `/api/v1/lots/dispatch-fefo` | Execute automated FEFO batch deduction, update lot balances, and log audits |
 
-### 5. Inter-Warehouse Stock Transfers (`/api/v1/transfers`)
+### 6. Inter-Warehouse Stock Transfers (`/api/v1/transfers`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -125,7 +139,7 @@ Once running, navigate to:
 | `POST` | `/api/v1/transfers/{id}/receive` | Confirm receipt, add destination inventory, and set status to `Received` |
 | `POST` | `/api/v1/transfers/{id}/cancel` | Cancel order before shipment and release reserved inventory |
 
-### 6. Barcodes & Handheld Scanner Resolution (`/api/v1/barcodes`)
+### 7. Barcodes & Handheld Scanner Resolution (`/api/v1/barcodes`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -134,7 +148,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/barcodes/qr/{sku}` | Generates 2D QR matrix SVG barcode for mobile scanners |
 | `GET` | `/api/v1/barcodes/scan/{scannedCode}` | Mobile scanner lookup resolving SKU into stock on-hand and facility bin coordinates |
 
-### 7. Bulk CSV Catalog Import & Export (`/api/v1/bulk`)
+### 8. Bulk CSV Catalog Import & Export (`/api/v1/bulk`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -142,7 +156,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/bulk/export/products` | Download entire product catalog as CSV spreadsheet |
 | `GET` | `/api/v1/bulk/export/template` | Download blank starter CSV template for supplier/catalog onboarding |
 
-### 8. Real-Time Webhooks (`/api/v1/webhooks`)
+### 9. Real-Time Webhooks (`/api/v1/webhooks`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -154,7 +168,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/webhooks/{id}/deliveries` | View recent delivery attempt audit logs and HTTP status codes |
 | `POST` | `/api/v1/webhooks/{id}/test` | Execute a live ping test with HMAC signature |
 
-### 9. Suppliers & Procurement (`/api/v1/suppliers`)
+### 10. Suppliers & Procurement (`/api/v1/suppliers`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -164,7 +178,7 @@ Once running, navigate to:
 | `POST` | `/api/v1/suppliers` | Register new supplier vendor |
 | `PUT` | `/api/v1/suppliers/{id}` | Update supplier profile and lead times |
 
-### 10. Automated Replenishment & Purchase Orders (`/api/v1/purchase-orders`)
+### 11. Automated Replenishment & Purchase Orders (`/api/v1/purchase-orders`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -177,7 +191,7 @@ Once running, navigate to:
 | `POST` | `/api/v1/purchase-orders/{id}/receive` | Receive shipment intake, increment warehouse stock, and recalculate unit costs |
 | `POST` | `/api/v1/purchase-orders/{id}/cancel` | Cancel an open purchase order |
 
-### 11. Stock Movements & Transactions (`/api/v1/inventory`)
+### 12. Stock Movements & Transactions (`/api/v1/inventory`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -187,7 +201,7 @@ Once running, navigate to:
 | `GET` | `/api/v1/inventory/transactions` | Paginated transaction audit log with date range and product filtering |
 | `GET` | `/api/v1/inventory/transactions/product/{productId}` | Retrieve transaction history for a specific product |
 
-### 12. Business Intelligence & Analytics (`/api/v1/inventory/summary`)
+### 13. Business Intelligence & Analytics (`/api/v1/inventory/summary`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -196,26 +210,30 @@ Once running, navigate to:
 
 ## Sample `curl` Requests
 
-### Querying Expiring Inventory Batches
+### Initiating a Physical Cycle Count
 ```bash
-curl -X GET "http://localhost:5000/api/v1/lots/expiring?daysThreshold=30"
-```
-
-### Computing FEFO Allocation Recommendation
-```bash
-curl -X GET "http://localhost:5000/api/v1/lots/fefo-plan?productId=8&quantity=10&warehouseId=1"
-```
-
-### Executing FEFO Batch Dispatch
-```bash
-curl -X POST "http://localhost:5000/api/v1/lots/dispatch-fefo" \
+curl -X POST "http://localhost:5000/api/v1/cycle-counts" \
   -H "Content-Type: application/json" \
   -d '{
-    "productId": 8,
     "warehouseId": 1,
-    "quantity": 10,
-    "referenceNumber": "SO-2026-8910",
-    "reason": "Expedited Customer Shipment"
+    "scope": "Category:Electronics",
+    "initiatedBy": "admin",
+    "notes": "Q3 Routine Physical Count"
+  }'
+```
+
+### Viewing Cycle Count Variance Discrepancy Report
+```bash
+curl -X GET "http://localhost:5000/api/v1/cycle-counts/1/variance-report"
+```
+
+### Reconciling Variances with Ledger Adjustments
+```bash
+curl -X POST "http://localhost:5000/api/v1/cycle-counts/1/reconcile" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "approvedBy": "manager",
+    "notes": "Variances approved after physical verification"
   }'
 ```
 
@@ -229,4 +247,4 @@ dotnet test
 
 ## Architecture Notes
 
-The Inventory Tracker API follows strict domain-driven design and clean architecture principles. Batch lots enforce physical traceability: products can be flagged with `IsLotTracked`, enabling warehouse-level lot isolation with distinct manufacturing and expiration dates. The FEFO allocation engine guarantees that oldest / soonest-expiring stock is allocated first, mitigating spoil/scrap risk and maintaining FIFO/FEFO accounting compliance.
+The Inventory Tracker API is architected around domain-driven rigor and strict audit accountability. Cycle counting provides blind physical audit integrity: system counts are snapshot at the moment an audit session is created, physical counts are entered without pre-populating expected numbers to avoid confirmation bias, and supervisor approvals automatically apply balanced inventory adjustments with immutable audit transactions.

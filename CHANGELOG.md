@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-08-27
+
+### Added
+- **Inventory Cycle Counting & Audit Reconciliation (`CycleCountsController`)**:
+  - `CycleCount`, `CycleCountItem`, and `CycleCountStatus` domain models (`Draft`, `InProgress`, `UnderReview`, `Reconciled`, `Cancelled`).
+  - `GET /api/v1/cycle-counts`: Paginated audit sessions with status and warehouse facility filters.
+  - `GET /api/v1/cycle-counts/{id}`: Detailed session retrieval with line items and count history.
+  - `POST /api/v1/cycle-counts`: Initiate audit session snapshotting current on-hand stock per facility.
+  - `POST /api/v1/cycle-counts/{id}/record-counts`: Batch blind count submission for warehouse floor clerks.
+  - `POST /api/v1/cycle-counts/{id}/submit-review`: Submit completed counts for supervisor review.
+  - `GET /api/v1/cycle-counts/{id}/variance-report`: Detailed variance report comparing counted vs system stock with net/absolute cost variances and inventory accuracy percentage.
+  - `POST /api/v1/cycle-counts/{id}/reconcile`: Approve discrepancies, post automated balancing inventory transactions, and update stock levels.
+  - `POST /api/v1/cycle-counts/{id}/cancel`: Void open audit session.
+- **Seeded Cycle Count**: Initialized realistic reconciled cycle count session (`CC-20260826-001`) in `DbInitializer`.
+- **Test Suite Expansion**: Added 4 new unit and controller tests in `CycleCountServiceTests` and `CycleCountsControllerTests`, expanding test coverage to 64 unit and integration tests with a 100% pass rate.
+
 ## [1.6.0] - 2026-08-27
 
 ### Added

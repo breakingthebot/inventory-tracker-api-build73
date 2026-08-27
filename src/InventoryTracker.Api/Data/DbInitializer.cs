@@ -435,6 +435,52 @@ public static class DbInitializer
 
         await context.ProductLots.AddRangeAsync(lots);
         await context.SaveChangesAsync();
+
+        // 11. Seed Sample Cycle Count Audit Session
+        var sampleCycleCount = new CycleCount
+        {
+            CountNumber = "CC-20260826-001",
+            WarehouseId = whEast,
+            Status = CycleCountStatus.Reconciled,
+            Scope = "Category:Electronics",
+            InitiatedBy = "admin",
+            ReviewedBy = "manager",
+            TotalItemsCounted = 2,
+            TotalVarianceUnits = -1,
+            TotalVarianceCost = -28.00m,
+            CreatedAtUtc = DateTime.UtcNow.AddDays(-2),
+            CompletedAtUtc = DateTime.UtcNow.AddDays(-1),
+            ReconciledAtUtc = DateTime.UtcNow.AddHours(-12),
+            Notes = "Quarterly electronics audit reconciled with minor variance",
+            Items = new List<CycleCountItem>
+            {
+                new()
+                {
+                    ProductId = products[0].Id,
+                    SystemQuantity = 25,
+                    CountedQuantity = 25,
+                    UnitCost = products[0].UnitCost,
+                    CountedBy = "clerk",
+                    CountedAtUtc = DateTime.UtcNow.AddDays(-1),
+                    IsReconciled = true,
+                    Notes = "Exact count matched"
+                },
+                new()
+                {
+                    ProductId = products[2].Id,
+                    SystemQuantity = 40,
+                    CountedQuantity = 39,
+                    UnitCost = products[2].UnitCost,
+                    CountedBy = "clerk",
+                    CountedAtUtc = DateTime.UtcNow.AddDays(-1),
+                    IsReconciled = true,
+                    Notes = "1 unit damaged packaging written off"
+                }
+            }
+        };
+
+        await context.CycleCounts.AddAsync(sampleCycleCount);
+        await context.SaveChangesAsync();
     }
 
     private static User CreateSeedUser(string username, string email, string fullName, string password, UserRole role)

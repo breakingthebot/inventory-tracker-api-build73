@@ -84,4 +84,9 @@ public class Warehouse
     /// Navigation collection of specific batch lots stored at this facility.
     /// </summary>
     public ICollection<ProductLot> ProductLots { get; set; } = new List<ProductLot>();
+
+    /// <summary>
+    /// Navigation collection of cycle count audit sessions conducted at this facility.
+    /// </summary>
+    public ICollection<CycleCount> CycleCounts { get; set; } = new List<CycleCount>();
 }
